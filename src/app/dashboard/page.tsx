@@ -1,7 +1,10 @@
 "use client";
 
+"use client";
+
 import { useState } from 'react';
-import DashboardClient from "@/components/DashboardClient";
+import DashboardClient from "../../components/DashboardClient";
+import SignOutButton from "../../components/SignOutButton";
 
 export default function DashboardPage() {
   const currentYear = new Date().getFullYear();
@@ -29,6 +32,9 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="p-4 md:p-8 max-w-4xl mx-auto">
+        <div className="flex justify-end mb-4">
+          <SignOutButton />
+        </div>
         {/* 📅 기간 및 모델 설정 영역 */}
         <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -72,6 +72,7 @@ export function generateMockShifts(year: number, month: number, scenario: Scenar
         id: `mock-${day}-${Math.random()}`,
         name: employeeName,
         day: formatTime(day),
+        date: `${year}-${formatTime(month + 1)}-${formatTime(day)}`,
         start_hour: formatTime(startH),
         start_minute: formatTime(startM),
         end_hour: formatTime(endH),

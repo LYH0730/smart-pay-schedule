@@ -75,11 +75,11 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const retryWithBackoff = async <T>(
+async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   retries: number = 3,
   delay: number = 2000
-): Promise<T> => {
+): Promise<T> {
   try {
     return await fn();
   } catch (error: any) {
@@ -90,9 +90,14 @@ const retryWithBackoff = async <T>(
     }
     throw error;
   }
-};
+}
 
-export default function DashboardClient({ selectedYear, selectedMonth, selectedModel }: DashboardClientProps) {
+export default function DashboardClient({ 
+  selectedYear, 
+  selectedMonth, 
+  selectedModel,
+  onAnalyzedMonthYearChange 
+}: DashboardClientProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
@@ -266,6 +271,7 @@ export default function DashboardClient({ selectedYear, selectedMonth, selectedM
             id: `shift-${s.name}-${s.day}-${Math.random()}`,
             name: s.name,
             day: String(s.day).padStart(2, '0'),
+            date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(s.day).padStart(2, '0')}`,
             start_hour: String(s.sh).padStart(2, '0'), 
             start_minute: String(s.sm).padStart(2, '0'),
             end_hour: String(s.eh).padStart(2, '0'), 
@@ -356,6 +362,7 @@ export default function DashboardClient({ selectedYear, selectedMonth, selectedM
       id: `manual-${Date.now()}`,
       name: addingState,
       day: newShiftData.day,
+      date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${newShiftData.day.padStart(2, '0')}`,
       start_hour: newShiftData.start_hour.padStart(2, '0'),
       start_minute: newShiftData.start_minute.padStart(2, '0'),
       end_hour: newShiftData.end_hour.padStart(2, '0'),
@@ -409,6 +416,7 @@ export default function DashboardClient({ selectedYear, selectedMonth, selectedM
     // 자동 휴게 시간 적용
     const shiftsWithBreak = mockShifts.map(s => ({
       ...s,
+      date: `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${s.day.padStart(2, '0')}`,
       break_minutes: getAutoBreakMinutes(s.start_hour, s.start_minute, s.end_hour, s.end_minute, breakThreshold, breakDeduction)
     }));
     setShifts(shiftsWithBreak);
