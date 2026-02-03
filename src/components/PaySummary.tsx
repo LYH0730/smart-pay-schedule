@@ -255,21 +255,21 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
   return (
     <div className="mt-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 🧾 리포트 헤더 */}
-      <div className="bg-slate-900 px-8 py-6 flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-            월별 급여 정산 리포트
-            <span className="text-orange-400 font-medium text-lg">({employeeName} 님)</span>
+      <div className="bg-slate-900 px-6 md:px-8 py-5 md:py-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="whitespace-nowrap">
+          <h3 className="text-lg md:text-xl font-black text-white tracking-tight flex items-center flex-wrap gap-x-2">
+            <span className="shrink-0">월별 급여 정산 리포트</span>
+            <span className="text-orange-400 font-medium text-base md:text-lg shrink-0">({employeeName} 님)</span>
           </h3>
-          <p className="text-slate-400 text-xs mt-1 font-medium uppercase tracking-wider">Payroll Summary Report</p>
+          <p className="text-slate-400 text-[10px] mt-1 font-medium uppercase tracking-wider">Payroll Summary Report</p>
         </div>
-        <div className="text-right flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
           {/* Download Dropdown */}
           <div className="relative" ref={menuRef}>
             <button 
               onClick={() => setIsDownloadMenuOpen(!isDownloadMenuOpen)}
               disabled={isGenerating}
-              className="bg-orange-500 hover:bg-orange-600 disabled:bg-slate-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-lg shadow-orange-900/20"
+              className="bg-orange-500 hover:bg-orange-600 disabled:bg-slate-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-lg shadow-orange-900/20 whitespace-nowrap"
             >
               {isGenerating ? (
                 <span className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full mr-1"></span>
@@ -285,16 +285,16 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
             </button>
 
             {isDownloadMenuOpen && (
-              <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute top-full left-0 mt-2 w-32 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
                 <button 
                   onClick={generatePayslip}
-                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2"
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
                   <span className="text-blue-500 text-sm">📄</span> Word (.docx)
                 </button>
                 <button 
                   onClick={generatePDF}
-                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 border-t border-slate-50"
+                  className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 border-t border-slate-50 whitespace-nowrap"
                 >
                   <span className="text-red-500 text-sm">📕</span> PDF (.pdf)
                 </button>
@@ -304,14 +304,14 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
 
           <button 
             onClick={() => setIsBreakdownOpen(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors flex items-center gap-1"
+            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-slate-700 transition-colors flex items-center gap-1 whitespace-nowrap"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             수식 검증
           </button>
-          <span className="inline-block bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-md uppercase">최종 검증 완료</span>
+          <span className="inline-block bg-orange-500 text-white text-[10px] font-black px-2 py-1.5 rounded-md uppercase whitespace-nowrap">최종 검증 완료</span>
         </div>
       </div>
       
