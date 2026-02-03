@@ -1,0 +1,40 @@
+{
+  "name": "smart-pay-schedule",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@supabase/supabase-js": "^2.93.3",
+    "@tailwindcss/postcss": "^4.1.18",
+    "browser-image-compression": "^2.0.2",
+    "docxtemplater": "^3.67.6",
+    "dotenv": "^17.2.3",
+    "file-saver": "^2.0.5",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
+    "next": "^16.1.6",
+    "pdfmake": "^0.3.3",
+    "pizzip": "^3.2.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^3.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.1.0",
+    "@types/react": "19.2.10",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.31",
+    "typescript": "5.9.3"
+  }
+}
