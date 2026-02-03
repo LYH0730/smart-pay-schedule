@@ -577,12 +577,12 @@ export default function DashboardClient({
                 <div className="overflow-x-auto">
                   <table className="w-full text-center">
                     <thead>
-                      <tr className="bg-slate-50 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                        <th className="py-4 px-2 whitespace-nowrap w-16">날짜</th>
-                        <th className="py-4 px-2 whitespace-nowrap">근무 시간 (출 ~ 퇴)</th>
-                        <th className="py-4 px-2 text-orange-500 whitespace-nowrap w-24">휴게(분)</th>
-                        <th className="py-4 px-2 bg-orange-50/50 text-orange-600 whitespace-nowrap w-32">실 유급 시간</th>
-                        <th className="py-4 px-2 w-10"></th>
+                      <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-tighter border-b border-slate-100">
+                        <th className="py-4 px-1 whitespace-nowrap w-10">일</th>
+                        <th className="py-4 px-1 whitespace-nowrap">시간</th>
+                        <th className="py-4 px-1 text-orange-500 whitespace-nowrap w-16">휴게</th>
+                        <th className="py-4 px-1 bg-orange-50/50 text-orange-600 whitespace-nowrap w-20">유급</th>
+                        <th className="py-4 px-1 w-8"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -593,17 +593,16 @@ export default function DashboardClient({
                             shift.break_minutes > 0 && !shift.is_paid_break ? 'bg-red-50/50' : ''
                           }`}
                         >
-                          <td className="py-5 font-bold text-slate-400 text-sm">
+                          <td className="py-4 px-0 font-bold text-slate-400 text-[15px]">
                             <div className="flex items-center justify-center">
                               <EditableCell 
                                 value={shift.day} 
                                 onUpdate={v => handleShiftUpdate(shift.id, 'day', v)} 
-                                className="w-8 text-right"
+                                className="w-7 text-center bg-slate-50 rounded"
                               />
-                              <span className="ml-1 text-xs">일</span>
                             </div>
                           </td>
-                          <td className="py-5">
+                          <td className="py-4 px-0">
                             <div className="flex justify-center items-center gap-1 font-bold text-slate-700">
                               <TimeInputCell 
                                 hour={shift.start_hour} 
@@ -613,24 +612,29 @@ export default function DashboardClient({
                                   handleShiftUpdate(shift.id, 'start_minute', m);
                                 }} 
                               />
-                              <span className="px-1 text-slate-300">→</span>
+                              <span className="text-slate-300 text-[10px]">→</span>
                               <TimeInputCell 
                                 hour={shift.end_hour} 
                                 minute={shift.end_minute} 
                                 onUpdate={(h, m) => {
                                   handleShiftUpdate(shift.id, 'end_hour', h);
-                                  handleShiftUpdate(shift.id, 'end_minute', m);
+                                  handleShiftUpdate(shift.id, 'start_minute', m);
                                 }} 
                               />
                             </div>
                           </td>
-                          <td className={`py-5 w-24 ${shift.is_break_manual ? 'bg-orange-50/50' : ''}`}>
-                            <EditableCell value={String(shift.break_minutes)} onUpdate={v => handleShiftUpdate(shift.id, 'break_minutes', Number(v))} className={shift.is_break_manual ? "text-orange-600 font-black" : "text-slate-400"} />
+                          <td className={`py-4 px-0 w-16 ${shift.is_break_manual ? 'bg-orange-50/50' : ''}`}>
+                            <EditableCell value={String(shift.break_minutes)} onUpdate={v => handleShiftUpdate(shift.id, 'break_minutes', Number(v))} className={`w-12 mx-auto ${shift.is_break_manual ? "text-orange-600 font-black" : "text-slate-400"}`} />
                           </td>
-                          <td className="py-5 font-black text-slate-800 bg-orange-50/30">
-                            {formatMinutesToHM(calculateShiftDurationMinutes(shift))}
+                          <td className="py-4 px-0 font-black text-slate-800 bg-orange-50/30 text-[14px]">
+                            {(() => {
+                                const mins = calculateShiftDurationMinutes(shift);
+                                const h = Math.floor(mins / 60);
+                                const m = mins % 60;
+                                return `${h}:${String(m).padStart(2, '0')}`;
+                            })()}
                           </td>
-                          <td className="py-5">
+                          <td className="py-4 px-0">
                             <button 
                               onClick={() => handleShiftDelete(shift.id)}
                               className="text-slate-300 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"

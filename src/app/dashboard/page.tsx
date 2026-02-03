@@ -31,7 +31,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="p-4 md:p-8 max-w-4xl mx-auto">
+      <div className="p-2 md:p-8 max-w-4xl mx-auto">
         <div className="flex justify-end mb-4">
           <SignOutButton />
         </div>

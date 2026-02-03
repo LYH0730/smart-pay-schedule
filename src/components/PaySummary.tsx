@@ -315,49 +315,40 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
         </div>
       </div>
       
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {/* 📅 주차별 상세 내역 (카드 그리드) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {weeklySummaries.map((weekSummary) => (
-            <div key={weekSummary.weekNumber} className="group p-5 border border-slate-100 rounded-2xl bg-slate-50/30 hover:bg-white hover:shadow-xl hover:border-orange-100 transition-all duration-300">
+            <div key={weekSummary.weekNumber} className="group p-4 border border-slate-100 rounded-2xl bg-slate-50/30 hover:bg-white hover:shadow-xl hover:border-orange-100 transition-all duration-300">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h4 className="font-black text-slate-800 text-lg">{weekSummary.weekNumber}주차</h4>
+                  <h4 className="font-black text-slate-800 text-base">{weekSummary.weekNumber}주차</h4>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">{weekSummary.startDate} - {weekSummary.endDate}</p>
-                </div>
-                <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
-                  <span className="text-slate-400 text-[10px] font-black block leading-none">주간 요약</span>
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm gap-4">
-                  <span className="text-slate-500 font-medium whitespace-nowrap">실제 근무 시간</span>
-                  <span className="font-bold text-slate-700 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-50 tabular-nums">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-xs gap-2">
+                  <span className="text-slate-500 font-medium whitespace-nowrap">실근무</span>
+                  <span className="font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-50 tabular-nums">
                     {formatMinutesToHM(weekSummary.actualWorkingMinutes)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm gap-4">
-                  <span className="text-slate-500 font-medium whitespace-nowrap">주휴수당 발생 시간</span>
-                  <span className="font-bold text-slate-700 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-50 tabular-nums">
+                <div className="flex justify-between items-center text-xs gap-2">
+                  <span className="text-slate-500 font-medium whitespace-nowrap">주휴발생</span>
+                  <span className="font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-50 tabular-nums">
                     {formatMinutesToHM(weekSummary.weeklyHolidayAllowanceMinutes)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm gap-4">
-                  <span className="text-slate-500 font-medium whitespace-nowrap">유급 근무 시간 (총)</span>
-                  <span className="font-bold text-slate-700 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-50 tabular-nums">
+                <div className="flex justify-between items-center text-xs gap-2">
+                  <span className="text-slate-500 font-medium whitespace-nowrap">유급총합</span>
+                  <span className="font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-50 tabular-nums">
                     {formatMinutesToHM(weekSummary.paidWorkingMinutes)}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm gap-4">
-                  <span className="text-slate-500 font-medium whitespace-nowrap">무급 휴게 시간</span>
-                  <span className="font-bold text-red-500 bg-white px-2 py-1 rounded-md shadow-sm border border-slate-50 tabular-nums">
-                    {formatMinutesToHM(weekSummary.unpaidBreakMinutes)}
-                  </span>
-                </div>
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
-                  <span className="text-xs font-black text-slate-400 uppercase whitespace-nowrap">주간 소계</span>
-                  <span className="font-black text-slate-900 tabular-nums">
+                <div className="pt-2 mt-2 border-t border-slate-100 flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase whitespace-nowrap">소계</span>
+                  <span className="font-black text-slate-900 text-sm tabular-nums">
                     {weekSummary.totalWeeklyPay.toLocaleString()}원
                   </span>
                 </div>
@@ -367,51 +358,51 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
         </div>
 
         {/* 💰 월별 최종 합계 (영수증 스타일 - 상세 내역) */}
-        <div className="relative bg-slate-50 rounded-2xl p-8 border-2 border-slate-100 overflow-hidden">
+        <div className="relative bg-slate-50 rounded-2xl p-4 md:p-8 border-2 border-slate-100 overflow-hidden">
           {/* 장식용 배경 요소 */}
           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"></div>
           
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 좌측: 시간 요약 */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200 border-dashed gap-4">
-                <span className="text-sm font-bold text-slate-500 italic whitespace-nowrap">실제 근무 시간</span>
-                <span className="text-lg font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyActualWorkingMinutes)}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
+                <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">실제 근무</span>
+                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyActualWorkingMinutes)}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200 border-dashed gap-4">
-                <span className="text-sm font-bold text-slate-500 italic whitespace-nowrap">주휴수당 발생 시간</span>
-                <span className="text-lg font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)}</span>
+              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
+                <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">주휴 시간</span>
+                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200 border-dashed gap-4">
-                <span className="text-sm font-bold text-slate-500 italic whitespace-nowrap">유급 근무 시간 (총)</span>
-                <span className="text-lg font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyPaidWorkingMinutes)}</span>
+              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
+                <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">유급 총합</span>
+                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyPaidWorkingMinutes)}</span>
               </div>
-              <div className="flex justify-between items-center pb-2 border-b border-slate-200 border-dashed gap-4">
-                <span className="text-sm font-bold text-slate-500 italic whitespace-nowrap">월간 주휴수당 합계</span>
-                <span className="text-lg font-black text-orange-600 whitespace-nowrap tabular-nums">₩{totalMonthlyWHA.toLocaleString()}</span>
+              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
+                <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">주휴수당</span>
+                <span className="text-base font-black text-orange-600 whitespace-nowrap tabular-nums">₩{totalMonthlyWHA.toLocaleString()}</span>
               </div>
             </div>
 
             {/* 우측: 금액 요약 (세전/세후) */}
-            <div className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm space-y-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-2">
               <div className="flex justify-between items-center gap-4">
-                <span className="text-sm font-bold text-slate-400 whitespace-nowrap">총 지급액 (세전)</span>
-                <span className="text-xl font-bold text-slate-700 whitespace-nowrap tabular-nums">{totalMonthlyPay.toLocaleString()}원</span>
+                <span className="text-xs font-bold text-slate-400 whitespace-nowrap">지급액(세전)</span>
+                <span className="text-lg font-bold text-slate-700 whitespace-nowrap tabular-nums">{totalMonthlyPay.toLocaleString()}원</span>
               </div>
               <div className="flex justify-between items-center text-red-500 gap-4">
-                <span className="text-sm font-bold whitespace-nowrap">원천징수 (3.3%)</span>
-                <span className="text-lg font-bold whitespace-nowrap tabular-nums">- {Math.floor(totalMonthlyPay * 0.033).toLocaleString()}원</span>
+                <span className="text-xs font-bold whitespace-nowrap">공제(3.3%)</span>
+                <span className="text-base font-bold whitespace-nowrap tabular-nums">- {Math.floor(totalMonthlyPay * 0.033).toLocaleString()}원</span>
               </div>
-              <div className="pt-4 mt-2 border-t-2 border-slate-100 flex justify-between items-end gap-4">
-                <div>
-                  <span className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-1 whitespace-nowrap">최종 예상 지급액</span>
-                  <span className="text-sm font-bold text-slate-900 underline decoration-orange-500 decoration-2 underline-offset-4 whitespace-nowrap">실 수령액</span>
+              <div className="pt-3 mt-2 border-t-2 border-slate-100 flex justify-between items-end gap-2">
+                <div className="min-w-0">
+                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-tight mb-0.5 whitespace-nowrap">최종 실 수령액</span>
+                  <span className="text-xs font-bold text-slate-900 underline decoration-orange-500 decoration-1 underline-offset-4 whitespace-nowrap">NET PAY</span>
                 </div>
-                <div className="text-right whitespace-nowrap">
-                  <span className="text-3xl font-black text-slate-900 tracking-tighter tabular-nums">
+                <div className="text-right whitespace-nowrap shrink-0">
+                  <span className="text-2xl font-black text-slate-900 tracking-tighter tabular-nums">
                     {(totalMonthlyPay - Math.floor(totalMonthlyPay * 0.033)).toLocaleString()}
                   </span>
-                  <span className="text-sm font-black text-slate-400 ml-1">원</span>
+                  <span className="text-[10px] font-black text-slate-400 ml-0.5">원</span>
                 </div>
               </div>
             </div>
