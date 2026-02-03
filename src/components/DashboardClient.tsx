@@ -61,7 +61,50 @@ function EditableCell({ value, onUpdate, className = "" }: { value: string, onUp
       type="text"
       value={value}
       onChange={(e) => onUpdate(e.target.value)}
-      className={`w-full bg-transparent p-1 rounded transition-all focus:bg-white focus:ring-2 focus:ring-orange-400 outline-none text-center font-medium ${className}`}
+      className={`w-full bg-transparent p-1 rounded transition-all focus:bg-white focus:ring-2 focus:ring-orange-400 outline-none text-center font-medium text-[16px] ${className}`}
+    />
+  );
+}
+
+// 📱 아이폰 최적화: 시/분 통합 입력 셀
+function TimeInputCell({ 
+  hour, 
+  minute, 
+  onUpdate 
+}: { 
+  hour: string, 
+  minute: string, 
+  onUpdate: (h: string, m: string) => void 
+}) {
+  const [localValue, setLocalValue] = useState(`${hour}:${minute}`);
+
+  useEffect(() => {
+    setLocalValue(`${hour}:${minute}`);
+  }, [hour, minute]);
+
+  const handleBlur = () => {
+    // 0930 -> 09:30, 930 -> 09:30, 9:3 -> 09:03 등의 보정 로직
+    let clean = localValue.replace(/[^0-9]/g, '');
+    if (clean.length <= 2) clean = clean.padStart(2, '0') + '00';
+    if (clean.length === 3) clean = '0' + clean;
+    if (clean.length > 4) clean = clean.substring(0, 4);
+
+    const h = clean.substring(0, 2);
+    const m = clean.substring(2, 4);
+    
+    setLocalValue(`${h}:${m}`);
+    onUpdate(h, m);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      onBlur={handleBlur}
+      className="w-[65px] bg-slate-50 p-1.5 rounded-lg border border-slate-200 text-center font-bold text-slate-700 focus:bg-white focus:ring-2 focus:ring-orange-400 outline-none text-[16px]"
+      placeholder="00:00"
     />
   );
 }
@@ -562,11 +605,23 @@ export default function DashboardClient({
                           </td>
                           <td className="py-5">
                             <div className="flex justify-center items-center gap-1 font-bold text-slate-700">
-                              <EditableCell value={shift.start_hour} onUpdate={v => handleShiftUpdate(shift.id, 'start_hour', v)} className="w-8" />:
-                              <EditableCell value={shift.start_minute} onUpdate={v => handleShiftUpdate(shift.id, 'start_minute', v)} className="w-8" />
-                              <span className="px-2 text-slate-300">→</span>
-                              <EditableCell value={shift.end_hour} onUpdate={v => handleShiftUpdate(shift.id, 'end_hour', v)} className="w-8" />:
-                              <EditableCell value={shift.end_minute} onUpdate={v => handleShiftUpdate(shift.id, 'end_minute', v)} className="w-8" />
+                              <TimeInputCell 
+                                hour={shift.start_hour} 
+                                minute={shift.start_minute} 
+                                onUpdate={(h, m) => {
+                                  handleShiftUpdate(shift.id, 'start_hour', h);
+                                  handleShiftUpdate(shift.id, 'start_minute', m);
+                                }} 
+                              />
+                              <span className="px-1 text-slate-300">→</span>
+                              <TimeInputCell 
+                                hour={shift.end_hour} 
+                                minute={shift.end_minute} 
+                                onUpdate={(h, m) => {
+                                  handleShiftUpdate(shift.id, 'end_hour', h);
+                                  handleShiftUpdate(shift.id, 'end_minute', m);
+                                }} 
+                              />
                             </div>
                           </td>
                           <td className={`py-5 w-24 ${shift.is_break_manual ? 'bg-orange-50/50' : ''}`}>
@@ -606,12 +661,36 @@ export default function DashboardClient({
                             </div>
                           </td>
                           <td className="py-4 px-2">
-                            <div className="flex justify-center items-center gap-1 font-bold text-slate-700 bg-white p-2 rounded-lg border border-orange-200 shadow-sm">
-                              <input className="w-6 text-center outline-none" placeholder="09" value={newShiftData.start_hour} onChange={e => setNewShiftData({...newShiftData, start_hour: e.target.value})} />:
-                              <input className="w-6 text-center outline-none" placeholder="00" value={newShiftData.start_minute} onChange={e => setNewShiftData({...newShiftData, start_minute: e.target.value})} />
-                              <span className="px-1 text-slate-300">→</span>
-                              <input className="w-6 text-center outline-none" placeholder="18" value={newShiftData.end_hour} onChange={e => setNewShiftData({...newShiftData, end_hour: e.target.value})} />:
-                              <input className="w-6 text-center outline-none" placeholder="00" value={newShiftData.end_minute} onChange={e => setNewShiftData({...newShiftData, end_minute: e.target.value})} />
+                            <div className="flex justify-center items-center gap-2 font-bold text-slate-700 bg-white p-2 rounded-lg border border-orange-200 shadow-sm">
+                              <input 
+                                className="w-14 text-center outline-none text-[16px]" 
+                                placeholder="09:00" 
+                                value={`${newShiftData.start_hour}:${newShiftData.start_minute}`} 
+                                onChange={e => {
+                                  const val = e.target.value.replace(/[^0-9:]/g, '');
+                                  if (val.includes(':')) {
+                                    const [h, m] = val.split(':');
+                                    setNewShiftData({...newShiftData, start_hour: h || '', start_minute: m || ''});
+                                  } else if (val.length <= 4) {
+                                    setNewShiftData({...newShiftData, start_hour: val.substring(0, 2), start_minute: val.substring(2, 4)});
+                                  }
+                                }} 
+                              />
+                              <span className="text-slate-300">→</span>
+                              <input 
+                                className="w-14 text-center outline-none text-[16px]" 
+                                placeholder="18:00" 
+                                value={`${newShiftData.end_hour}:${newShiftData.end_minute}`} 
+                                onChange={e => {
+                                  const val = e.target.value.replace(/[^0-9:]/g, '');
+                                  if (val.includes(':')) {
+                                    const [h, m] = val.split(':');
+                                    setNewShiftData({...newShiftData, end_hour: h || '', end_minute: m || ''});
+                                  } else if (val.length <= 4) {
+                                    setNewShiftData({...newShiftData, end_hour: val.substring(0, 2), end_minute: val.substring(2, 4)});
+                                  }
+                                }} 
+                              />
                             </div>
                           </td>
                           <td className="py-4 px-2">
