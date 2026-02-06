@@ -3,21 +3,26 @@ create or replace function auth.user_id() returns uuid as $$
   select nullif(current_setting('request.jwt.claims', true)::json->>'sub', '')::uuid;
 $$ language sql stable;
 
+-- profiles 테이블 생성 (사용자 정보 확장)
+CREATE TABLE public.profiles (
+  id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  shop_name TEXT,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- employees 테이블 생성
--- 각 직원은 특정 user(매니저)에게 속합니다.
-CREATE TABLE employees (
+CREATE TABLE public.employees (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.user_id(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     name TEXT NOT NULL,
     hourly_wage NUMERIC NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- shifts 테이블 생성
--- 각 근무 기록은 특정 user(매니저)에게 속합니다.
-CREATE TABLE shifts (
+CREATE TABLE public.shifts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.user_id(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE DEFAULT auth.uid(),
     employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     start_time TIMESTAMPTZ NOT NULL,
@@ -27,19 +32,43 @@ CREATE TABLE shifts (
 );
 
 -- RLS 활성화
-ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
 
--- employees 테이블 RLS 정책: 자신의 직원 정보만 CUD (생성, 수정, 삭제) 및 R (읽기) 가능
+-- profiles 테이블 RLS 정책
+CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+-- 회원가입 시 트리거로 생성되므로 INSERT 정책은 선택 사항이지만, 혹시 모르니 허용
+CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- employees 테이블 RLS 정책
 CREATE POLICY "Users can manage their own employees"
-ON employees
+ON public.employees
 FOR ALL
-USING (auth.user_id() = user_id)
-WITH CHECK (auth.user_id() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
--- shifts 테이블 RLS 정책: 자신의 근무 기록만 CUD (생성, 수정, 삭제) 및 R (읽기) 가능
+-- shifts 테이블 RLS 정책
 CREATE POLICY "Users can manage their own shifts"
-ON shifts
+ON public.shifts
 FOR ALL
-USING (auth.user_id() = user_id)
-WITH CHECK (auth.user_id() = user_id);
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- [Trigger] 새 사용자가 가입하면 자동으로 profiles 행 생성
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, shop_name)
+  values (new.id, '나의 가게');
+  return new;
+end;
+$$ language plpgsql security definer;
+
+-- 기존 트리거가 있다면 삭제 후 재생성 (안전장치)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();

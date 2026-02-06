@@ -59,11 +59,13 @@ export async function POST(req: NextRequest) {
 
     let parsedShifts = [];
     let jsonString = text.trim();
+    let isTruncated = false; // 🌟 잘림 여부 플래그
 
     try {
       parsedShifts = JSON.parse(jsonString);
     } catch (parseError) {
       console.warn("JSON 파싱 실패. 잘린 데이터 복구 시도 중...");
+      isTruncated = true; // 복구 로직 진입 시 플래그 설정
 
       const startIndex = jsonString.indexOf('[');
       if (startIndex !== -1) {
@@ -99,7 +101,9 @@ export async function POST(req: NextRequest) {
       name: s.name === '언니' ? '엔니' : s.name
     }));
 
-    return NextResponse.json(correctedShifts);
+    return NextResponse.json(correctedShifts, {
+      headers: isTruncated ? { 'X-AI-Response-Truncated': 'true' } : {}
+    });
 
   } catch (error: any) {
     console.error("Gemini API 상세 에러:", error);

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import imageCompression from 'browser-image-compression';
 import { Shift, WeeklyPayrollSummary } from '../types';
 import PaySummary from './PaySummary';
+import { createClient } from '@/lib/supabase/client';
 import { 
   calculateMonthlyPayroll, 
   calculateShiftDurationMinutes, 
@@ -67,11 +68,11 @@ function EditableCell({ value, onUpdate, className = "" }: { value: string, onUp
 }
 
 // 📱 아이폰 최적화: 시/분 통합 입력 셀
-function TimeInputCell({ 
+function TimeInputCell({
   hour, 
   minute, 
   onUpdate 
-}: { 
+}: {
   hour: string, 
   minute: string, 
   onUpdate: (h: string, m: string) => void 
@@ -135,7 +136,7 @@ async function retryWithBackoff<T>(
   }
 }
 
-export default function DashboardClient({ 
+export default function DashboardClient({
   selectedYear, 
   selectedMonth, 
   selectedModel,
@@ -155,20 +156,48 @@ export default function DashboardClient({
   const [breakThreshold, setBreakThreshold] = useState(480);
   const [breakDeduction, setBreakDeduction] = useState(60);
   const [calculatedPaySummary, setCalculatedPaySummary] = useState<WeeklyPayrollSummary[]>([]);
+  const [shopName, setShopName] = useState("나의 가게");
+  const supabase = createClient();
+
+  // 🌟 Supabase에서 가게 이름 로드
+  useEffect(() => {
+    const loadShopName = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('shop_name')
+        .eq('id', user.id)
+        .single();
+
+      if (data?.shop_name) {
+        setShopName(data.shop_name);
+      }
+    };
+    
+    loadShopName();
+  }, []);
+
+  // 🌟 Supabase에 가게 이름 저장
+  const handleShopNameChange = async (newName: string) => {
+    setShopName(newName); // 낙관적 UI 업데이트
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from('profiles')
+      .update({ shop_name: newName })
+      .eq('id', user.id);
+  };
 
   // DevTools State
   const [isDevMenuOpen, setIsDevMenuOpen] = useState(false);
 
   // 🌟 인라인 추가 폼 상태 관리
   const [addingState, setAddingState] = useState<string | null>(null); // 현재 추가 중인 사원 이름 (null이면 추가 중 아님)
-  const [newShiftData, setNewShiftData] = useState<{
-    day: string;
-    start_hour: string;
-    start_minute: string;
-    end_hour: string;
-    end_minute: string;
-    break_minutes: string;
-  }>({
+  const [newShiftData, setNewShiftData] = useState({
     day: '', start_hour: '', start_minute: '00', end_hour: '', end_minute: '00', break_minutes: '60'
   });
 
@@ -200,12 +229,19 @@ export default function DashboardClient({
   }, [shifts, selectedYear, selectedMonth]);
 
   const groupedData = useMemo(() => {
-    return displayedShifts.reduce((acc, s) => {
+    const groups = displayedShifts.reduce((acc, s) => {
       if (!acc[s.name]) acc[s.name] = [];
       acc[s.name].push(s);
       return acc;
     }, {} as Record<string, any[]>);
-  }, [displayedShifts]);
+
+    // 🌟 수동 입력 모드 지원: 추가 중인 사원의 그룹이 없으면 빈 그룹 생성
+    if (addingState && !groups[addingState]) {
+      groups[addingState] = [];
+    }
+
+    return groups;
+  }, [displayedShifts, addingState]);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -308,7 +344,16 @@ export default function DashboardClient({
             return res;
           }, 3, 3000);
 
-          const analyzed = await response.json();
+          // 🌟 응답 헤더에서 잘림 여부 확인
+          const isTruncated = response.headers.get('X-AI-Response-Truncated') === 'true';
+
+          let analyzed;
+          try {
+            analyzed = await response.json();
+          } catch (parseError) {
+            console.error("JSON 파싱 에러:", parseError);
+            throw new Error("JSON_PARSE_FAILED");
+          }
           
           setShifts(prev => [...prev, ...analyzed.map((s: any) => ({
             id: `shift-${s.name}-${s.day}-${Math.random()}`,
@@ -324,14 +369,35 @@ export default function DashboardClient({
             is_paid_break: false
           }))]);
 
+          // 잘림 경고가 있다면 사용자에게 알림 (데이터 처리 후에 표시)
+          if (isTruncated) {
+            setError(`⚠️ 경고: AI 응답이 중간에 잘려 일부 데이터가 누락되었을 수 있습니다. (자동 복구됨)
+            
+            분석 결과를 꼼꼼히 확인해주시고, 데이터가 많이 빠졌다면 다음을 시도해보세요:
+            1. 상단의 모델 선택 메뉴에서 다른 모델을 선택해보세요.
+            2. '빠른 전송 (압축 ON)' 체크를 해제하고 다시 시도해보세요.
+            3. 누락된 기록은 하단의 '근무 기록 추가' 버튼으로 직접 입력할 수 있습니다.`);
+          }
+
         } catch (e: any) {
           console.error("페어 분석 실패:", e);
-          setError("일부 카드 분석에 실패했습니다.");
+          if (e.message === "JSON_PARSE_FAILED") {
+            setError(`⚠️ AI 응답이 불완전하여 분석에 실패했습니다.
+            
+            💡 해결 방법:
+            1. 상단의 모델 선택 메뉴에서 다른 모델을 선택해보세요.
+            2. '빠른 전송 (압축 ON)' 체크를 해제하고 다시 시도해보세요.
+            3. 누락된 기록은 하단의 '근무 기록 추가' 버튼으로 직접 입력할 수 있습니다.`);
+          } else {
+            setError("일부 카드 분석에 실패했습니다.");
+          }
         }
         await new Promise(res => setTimeout(res, 3000));
       }
     } catch (err: any) {
-      setError("분석 프로세스 도중 오류가 발생했습니다.");
+      if (err.message !== "JSON_PARSE_FAILED") {
+        setError("분석 프로세스 도중 오류가 발생했습니다.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -470,10 +536,19 @@ export default function DashboardClient({
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto bg-gray-50 min-h-screen font-sans text-slate-900 relative">
       <header className="mb-10 text-center">
-        <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">
-          MOM'S TOUCH <span className="text-orange-500">PAYROLL</span>
-        </h1>
-        <p className="text-slate-500 font-medium">굽은다리역점 스마트 급여 정산 시스템</p>
+        <div className="inline-flex items-center justify-center gap-2 group cursor-pointer">
+          <input 
+            type="text" 
+            value={shopName} 
+            onChange={(e) => handleShopNameChange(e.target.value)} 
+            className="text-4xl font-black text-slate-800 tracking-tight text-center bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-all w-auto min-w-[200px]"
+            placeholder="가게 이름을 입력하세요"
+          />
+          <span className="text-2xl opacity-0 group-hover:opacity-50 transition-opacity">✏️</span>
+        </div>
+        <p className="text-slate-500 font-medium mt-2">
+          <span className="text-orange-500 font-bold">Smart Pay</span> 급여 정산 시스템
+        </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -505,12 +580,12 @@ export default function DashboardClient({
           <section className="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">📸 근무표 업로드</h2>
-              <label className="flex items-center gap-2 cursor-pointer group" title={useCompression ? "이미지 용량을 줄여 전송 속도를 높입니다." : "이미지 원본 그대로 전송합니다."}>
+              <label className="flex items-center gap-2 cursor-pointer group" title={useCompression ? "이미지 용량을 줄여 전송 속도를 높입니다." : "이미지 원본 그대로 전송합니다."} >
                 <div className="relative">
                   <input 
                     type="checkbox" 
-                    checked={useCompression} 
-                    onChange={(e) => setUseCompression(e.target.checked)} 
+                    checked={useCompression}
+                    onChange={(e) => setUseCompression(e.target.checked)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
@@ -534,6 +609,11 @@ export default function DashboardClient({
                 </div>
               )}
             </div>
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-100 rounded-xl text-xs font-bold text-red-600 whitespace-pre-line leading-relaxed">
+                {error}
+              </div>
+            )}
             {filePreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-2">
                 {filePreviews.map((src, index) => (
@@ -564,7 +644,7 @@ export default function DashboardClient({
         </aside>
 
         <main className="lg:col-span-2 space-y-8">
-          {shifts.length > 0 ? (
+          {shifts.length > 0 || addingState ? (
             Object.entries(groupedData).map(([name, employeeShifts]) => (
               <article key={name} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                 <div className="bg-slate-900 px-6 py-4 flex justify-between items-center">
@@ -590,7 +670,7 @@ export default function DashboardClient({
                         <tr 
                           key={shift.id} 
                           className={`hover:bg-slate-50/50 transition-colors ${
-                            shift.break_minutes > 0 && !shift.is_paid_break ? 'bg-red-50/50' : ''
+                            shift.break_minutes > 0 && !shift.is_paid_break ? 'bg-red-100/70 hover:bg-red-100' : ''
                           }`}
                         >
                           <td className="py-4 px-0 font-bold text-slate-400 text-[15px]">
@@ -735,11 +815,19 @@ export default function DashboardClient({
                   </table>
                 </div>
               </article>
-            ))
+            )) 
           ) : (
-            <div className="h-64 flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 text-slate-400">
-              <p className="font-bold text-lg">데이터가 없습니다.</p>
-              <p className="text-sm">근무표 사진을 업로드하여 분석을 시작하세요.</p>
+            <div className="h-64 flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 gap-4">
+              <div className="text-center">
+                <p className="font-bold text-lg text-slate-500">데이터가 없습니다.</p>
+                <p className="text-sm">근무표 사진을 업로드하거나 수동으로 시작하세요.</p>
+              </div>
+              <button 
+                onClick={() => startAdding("직원")}
+                className="px-6 py-3 bg-white border border-slate-200 shadow-sm rounded-xl text-slate-600 font-bold hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all flex items-center gap-2"
+              >
+                <span className="text-lg">✏️</span> 수동 입력 시작하기
+              </button>
             </div>
           )}
 
@@ -760,19 +848,34 @@ export default function DashboardClient({
             weeklySummaries={calculatedPaySummary} 
             hourlyWage={hourlyWage} 
             employeeName={shifts.length > 0 ? shifts[0].name : "직원"}
+            allShifts={shifts}
+            year={selectedYear}
+            month={selectedMonth}
+            shopName={shopName}
           />
         </section>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="relative bg-white rounded-lg shadow-xl max-w-3xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <button className="absolute top-3 right-3 text-white bg-gray-800 rounded-full p-2 hover:bg-gray-700 transition-colors z-10" onClick={() => setIsModalOpen(false)}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <img src={modalImageSrc} alt="Full size preview" className="max-w-full max-h-full object-contain" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsModalOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* 고정 헤더 */}
+            <div className="flex justify-between items-center p-2 px-4 border-b border-slate-100 bg-white z-10 shrink-0">
+              <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">이미지 미리보기</span>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-red-500 rounded-full p-1.5 transition-all"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* 스크롤 영역 */}
+            <div className="overflow-y-auto p-4 bg-slate-50 flex-1 flex items-start justify-center">
+              <img src={modalImageSrc} alt="Full size preview" className="max-w-full h-auto rounded-lg shadow-sm" />
+            </div>
           </div>
         </div>
       )}

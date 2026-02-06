@@ -1,27 +1,50 @@
 "use client";
 
 import { useEffect, useState, useRef } from 'react';
-import { WeeklyPayrollSummary } from '../types'; 
+import { Shift, WeeklyPayrollSummary } from '../types'; 
 import { formatMinutesToHM } from '../lib/payroll-utils';
 import CalculationBreakdown from './CalculationBreakdown';
-import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { 
+  Document, 
+  Packer, 
+  Paragraph, 
+  Table, 
+  TableRow, 
+  TableCell, 
+  WidthType, 
+  TextRun, 
+  AlignmentType,
+  HeadingLevel,
+  BorderStyle,
+  VerticalAlign
+} from 'docx';
 
 interface PaySummaryProps {
   weeklySummaries: WeeklyPayrollSummary[];
   hourlyWage: number;
   employeeName: string;
+  allShifts: Shift[]; // 🌟 원본 근무 기록 (근무확인표용)
+  year: number;       // 🌟 해당 년도
+  month: number;      // 🌟 해당 월 (0-based)
+  shopName: string;   // 🌟 가게 이름
 }
 
-export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }: PaySummaryProps) {
+export default function PaySummary({
+  weeklySummaries, 
+  hourlyWage, 
+  employeeName,
+  allShifts,
+  year,
+  month,
+  shopName
+}: PaySummaryProps) {
   const [totalMonthlyPay, setTotalMonthlyPay] = useState(0);
-  const [totalMonthlyMinutes, setTotalMonthlyMinutes] = useState(0); // This is total paid working minutes
+  const [totalMonthlyMinutes, setTotalMonthlyMinutes] = useState(0); 
   const [totalMonthlyWHA, setTotalMonthlyWHA] = useState(0);
 
-  // New state for detailed monthly totals
   const [totalMonthlyActualWorkingMinutes, setTotalMonthlyActualWorkingMinutes] = useState(0);
   const [totalMonthlyWeeklyHolidayAllowanceMinutes, setTotalMonthlyWeeklyHolidayAllowanceMinutes] = useState(0);
   const [totalMonthlyPaidWorkingMinutes, setTotalMonthlyPaidWorkingMinutes] = useState(0);
@@ -35,10 +58,9 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
   useEffect(() => {
     if (weeklySummaries.length > 0) {
       const totalPay = weeklySummaries.reduce((acc, summary) => acc + summary.totalWeeklyPay, 0);
-      const totalMinutes = weeklySummaries.reduce((acc, summary) => acc + summary.totalMinutes, 0); // This is actual working minutes
+      const totalMinutes = weeklySummaries.reduce((acc, summary) => acc + summary.totalMinutes, 0); 
       const totalWHA = weeklySummaries.reduce((acc, summary) => acc + summary.weeklyHolidayAllowance, 0);
 
-      // Calculate new detailed monthly totals
       const totalActual = weeklySummaries.reduce((acc, summary) => acc + summary.actualWorkingMinutes, 0);
       const totalWHA_Minutes = weeklySummaries.reduce((acc, summary) => acc + summary.weeklyHolidayAllowanceMinutes, 0);
       const totalPaid = weeklySummaries.reduce((acc, summary) => acc + summary.paidWorkingMinutes, 0);
@@ -64,7 +86,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
     }
   }, [weeklySummaries]);
 
-  // 메뉴 외부 클릭 시 닫기
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -82,7 +103,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        // 일부 브라우저는 data:font/ttf;base64,... 헤더를 붙여주므로 제거
         const base64 = result.includes(',') ? result.split(',')[1] : result;
         resolve(base64);
       };
@@ -96,44 +116,38 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
     setIsDownloadMenuOpen(false);
 
     try {
-      // 1. 폰트 로드 (Bold는 필요 시 추가 로드, 여기선 Regular 하나로 통일해도 무방하나 퀄리티를 위해 둘 다)
       const [regFont, boldFont] = await Promise.all([
         getFontAsBase64('/fonts/NanumGothic-Regular.ttf'),
         getFontAsBase64('/fonts/NanumGothic-Bold.ttf')
       ]);
 
-      // 2. jsPDF 초기화
       const doc = new jsPDF();
 
-      // 3. 폰트 등록 (VFS)
       doc.addFileToVFS('NanumGothic-Regular.ttf', regFont);
       doc.addFileToVFS('NanumGothic-Bold.ttf', boldFont);
       
       doc.addFont('NanumGothic-Regular.ttf', 'NanumGothic', 'normal');
       doc.addFont('NanumGothic-Bold.ttf', 'NanumGothic', 'bold');
 
-      doc.setFont('NanumGothic'); // 기본 폰트 설정
+      doc.setFont('NanumGothic');
 
-      // 4. 데이터 준비
+      // --- 1페이지: 급여 명세서 ---
       const startDate = weeklySummaries[0]?.startDate || "";
       const endDate = weeklySummaries[weeklySummaries.length - 1]?.endDate || "";
       const withholdingTax = Math.floor(totalMonthlyPay * 0.033);
       const totalNetPay = totalMonthlyPay - withholdingTax;
 
-      // 5. 헤더 그리기 (위치 미세 조정)
-      doc.setFontSize(11);
-      doc.setTextColor(0, 0, 0); // 검정
-      doc.text('맘스터치 굽은다리역점', 105, 25, { align: 'center' }); // y: 20 -> 25
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text(shopName, 105, 25, { align: 'center' });
+      
+            doc.setFontSize(22);      doc.setFont('NanumGothic', 'bold');
+      doc.text(`급여 명세서 (${employeeName} 님)`, 105, 38, { align: 'center' }); 
 
-      doc.setFontSize(22); // 20 -> 22 (제목 좀 더 크게)
-      doc.setFont('NanumGothic', 'bold');
-      doc.text(`급여 명세서 (${employeeName} 님)`, 105, 38, { align: 'center' }); // y: 30 -> 38
-
-      // 6. 테이블 그리기 (DOCX 100% 싱크로율 도전 - 정밀 튜닝)
       autoTable(doc, {
         startY: 50,
-        tableWidth: 160, // 표 너비 160mm
-        margin: { left: 25 }, // 중앙 정렬
+        tableWidth: 160, 
+        margin: { left: 25 }, 
         head: [['항목', '내용']],
         body: [
           ['직원명', employeeName],
@@ -150,13 +164,13 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
         theme: 'grid',
         styles: {
           font: 'NanumGothic',
-          fontSize: 10.5, // 워드 기본 폰트 크기 (10.5pt)
-          cellPadding: { top: 2, bottom: 2, left: 5, right: 5 }, // 상하 패딩은 줄이고 minCellHeight로 높이 조절
+          fontSize: 10.5, 
+          cellPadding: { top: 2, bottom: 2, left: 5, right: 5 }, 
           textColor: [0, 0, 0],
           lineColor: [0, 0, 0],
-          lineWidth: 0.2, // 테두리 약간 두껍게 (워드 느낌)
-          valign: 'middle', // 수직 중앙 정렬
-          minCellHeight: 10, // 행 높이 최소 10mm (시원한 느낌)
+          lineWidth: 0.2, 
+          valign: 'middle', 
+          minCellHeight: 10, 
         },
         headStyles: {
           fillColor: [224, 224, 224],
@@ -166,17 +180,111 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
           valign: 'middle',
           lineColor: [0, 0, 0],
           lineWidth: 0.2,
-          minCellHeight: 12, // 헤더는 조금 더 높게
+          minCellHeight: 12, 
         },
         columnStyles: {
-          0: { cellWidth: 40, fontStyle: 'bold', halign: 'center' }, // 너비 40mm로 조정 (밸런스)
+          0: { cellWidth: 40, fontStyle: 'bold', halign: 'center' }, 
           1: { cellWidth: 'auto', halign: 'left' }
         },
       });
 
-      // 7. 푸터 문구 삭제 (DOCX 원본 동일화)
+      // --- 2페이지: 근무 확인표 ---
+      doc.addPage();
+      
+      // 2페이지 헤더
+      doc.setFontSize(11);
+      doc.setFont('NanumGothic', 'normal');
+      doc.text(`${year}년 ${month + 1}월 근무 상세 내역`, 15, 20);
 
-      // 8. 저장
+      doc.setFontSize(20);
+      doc.setFont('NanumGothic', 'bold');
+      doc.text('근무 확인표', 15, 30);
+
+      doc.setFontSize(12);
+      doc.setFont('NanumGothic', 'normal');
+      doc.text(`성명: ${employeeName}`, 195, 30, { align: 'right' });
+
+      // 달력 데이터 생성
+      const firstDay = new Date(year, month, 1).getDay(); // 0(일) ~ 6(토)
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const calendarBody = [];
+      let currentWeek: (string | object)[] = new Array(7).fill(""); 
+      
+      // 첫 주 빈칸 채우기
+      for (let i = 0; i < firstDay; i++) {
+        currentWeek[i] = "";
+      }
+
+      // 날짜 채우기
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayOfWeek = new Date(year, month, day).getDay();
+        
+        // 해당 날짜의 근무 기록 찾기
+        const shifts = allShifts.filter(s => parseInt(s.day) === day)
+          .sort((a, b) => (parseInt(a.start_hour) * 60 + parseInt(a.start_minute)) - (parseInt(b.start_hour) * 60 + parseInt(b.start_minute)));
+
+        let cellContent = String(day);
+        if (shifts.length > 0) {
+          const timeStrings = shifts.map(s => `\n${s.start_hour}:${s.start_minute} ~ ${s.end_hour}:${s.end_minute}`);
+          cellContent += timeStrings.join('');
+        }
+
+        currentWeek[dayOfWeek] = cellContent;
+
+        // 토요일이거나 마지막 날이면 행 추가 후 초기화
+        if (dayOfWeek === 6 || day === daysInMonth) {
+          calendarBody.push(currentWeek);
+          currentWeek = new Array(7).fill("");
+        }
+      }
+
+      // 달력 그리기
+      autoTable(doc, {
+        startY: 40,
+        head: [['일', '월', '화', '수', '목', '금', '토']],
+        body: calendarBody,
+        theme: 'grid',
+        tableWidth: 175, // 7 columns * 25mm = 175mm
+        margin: { left: 17.5 }, // (210 - 175) / 2 = 17.5mm (Center align)
+        styles: {
+          font: 'NanumGothic',
+          fontSize: 10,
+          textColor: [0, 0, 0],
+          lineColor: [0, 0, 0],
+          lineWidth: 0.1,
+          valign: 'top', // 날짜가 상단에 오도록
+          halign: 'left',
+          minCellHeight: 25, // 달력 칸 높이 확보
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [240, 240, 240],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle',
+          lineColor: [0, 0, 0],
+          lineWidth: 0.1,
+          minCellHeight: 10,
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 25 },
+          6: { cellWidth: 25 },
+        },
+        didParseCell: function(data) {
+            if (data.section === 'head') {
+                if (data.column.index === 0) data.cell.styles.textColor = [255, 0, 0]; 
+                if (data.column.index === 6) data.cell.styles.textColor = [0, 0, 255]; 
+            }
+        }
+      });
+
       doc.save(`급여명세서_${employeeName}_${startDate.substring(0, 7)}.pdf`);
 
     } catch (error) {
@@ -187,66 +295,189 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
     }
   };
 
-  const generatePayslip = async () => {
+  const generateDocx = async () => {
     setIsGenerating(true);
     setIsDownloadMenuOpen(false);
     try {
-      // 1. Load the template
-      const response = await fetch('/payslip layout.docx');
-      if (!response.ok) throw new Error("템플릿 파일을 찾을 수 없습니다.");
-      const content = await response.arrayBuffer();
-
-      // 2. Setup PizZip and Docxtemplater
-      const zip = new PizZip(content);
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-        delimiters: { start: '{{', end: '}}' },
-      });
-
-      // 3. Prepare data
-      // employeeName은 props에서 직접 사용
       const startDate = weeklySummaries[0]?.startDate || "";
       const endDate = weeklySummaries[weeklySummaries.length - 1]?.endDate || "";
-      
-      const totalGrossPay = totalMonthlyPay;
-      const withholdingTax = Math.floor(totalMonthlyPay * 0.033); // 3.3% tax
+      const withholdingTax = Math.floor(totalMonthlyPay * 0.033);
       const totalNetPay = totalMonthlyPay - withholdingTax;
 
-      const data = {
-        employeeName: employeeName,
-        periodStartDate: startDate,
-        periodEndDate: endDate,
-        totalUnpaidBreakMinutes: formatMinutesToHM(totalMonthlyUnpaidBreakMinutes),
-        totalActualWorkingMinutes: formatMinutesToHM(totalMonthlyActualWorkingMinutes),
-        totalWeeklyHolidayAllowanceMinutes: formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes),
-        totalPaidWorkingMinutes: formatMinutesToHM(totalMonthlyPaidWorkingMinutes),
-        hourlyWage: hourlyWage.toLocaleString() + "원",
-        totalGrossPay: totalGrossPay.toLocaleString() + "원",
-        withholdingTax: withholdingTax.toLocaleString() + "원",
-        totalNetPay: totalNetPay.toLocaleString() + "원",
-      };
+      // --- 1. 급여 명세서 테이블 행 구성 ---
+      const payslipRows = [
+        ['직원명', employeeName],
+        ['기간', `${startDate} ~ ${endDate}`],
+        ['휴게시간', formatMinutesToHM(totalMonthlyUnpaidBreakMinutes)],
+        ['실근무시간', formatMinutesToHM(totalMonthlyActualWorkingMinutes)],
+        ['주휴수당 시간', formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)],
+        ['총 유급시간', formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
+        ['시급', `${hourlyWage.toLocaleString()}원`],
+        ['총 지급액 (세전)', `${totalMonthlyPay.toLocaleString()}원`],
+        ['원천징수 3.3%', `${withholdingTax.toLocaleString()}원`],
+        ['실지급액', `${totalNetPay.toLocaleString()}원`],
+      ].map(([label, value]) => 
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 4000, type: WidthType.DXA },
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: String(label), bold: true })], 
+                alignment: AlignmentType.CENTER 
+              })],
+              verticalAlign: VerticalAlign.CENTER,
+              shading: { fill: "E0E0E0" }, // 헤더 컬럼 배경색
+            }),
+            new TableCell({
+              width: { size: 6000, type: WidthType.DXA },
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: String(value), bold: label === '실지급액' })], 
+                alignment: AlignmentType.LEFT 
+              })],
+              verticalAlign: VerticalAlign.CENTER,
+            }),
+          ],
+          height: { value: 600, rule: "atLeast" } // 높이 확보
+        })
+      );
 
-      // 4. Render the document
-      doc.render(data);
+      // --- 2. 근무확인표 (달력) 데이터 준비 ---
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const calendarRows: TableRow[] = [];
+      let currentWeekCells: TableCell[] = [];
+      
+      const CALENDAR_CELL_HEIGHT = 2500; // 🌟 1500 -> 2500 (약 4.4cm) 상향
 
-      // 5. Generate and download
-      const out = doc.getZip().generate({
-        type: 'blob',
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      // 첫 주 빈칸
+      for (let i = 0; i < firstDay; i++) {
+        currentWeekCells.push(new TableCell({ 
+          children: [], 
+          width: { size: 100/7, type: WidthType.PERCENTAGE },
+          height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }
+        }));
+      }
+
+      // 날짜 채우기
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayOfWeek = new Date(year, month, day).getDay();
+        const shifts = allShifts.filter(s => parseInt(s.day) === day)
+          .sort((a, b) => (parseInt(a.start_hour) * 60 + parseInt(a.start_minute)) - (parseInt(b.start_hour) * 60 + parseInt(b.start_minute)));
+
+        const cellChildren = [
+          new Paragraph({ children: [new TextRun({ text: String(day), bold: true, size: 24 })] }) // 🌟 폰트 크기 상향
+        ];
+
+        if (shifts.length > 0) {
+           shifts.forEach(s => {
+             cellChildren.push(new Paragraph({
+               text: `${s.start_hour}:${s.start_minute} ~ ${s.end_hour}:${s.end_minute}`,
+             }));
+           });
+        }
+
+        currentWeekCells.push(new TableCell({
+          children: cellChildren,
+          width: { size: 100/7, type: WidthType.PERCENTAGE }, 
+          height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }, 
+          verticalAlign: VerticalAlign.TOP,
+        }));
+
+        if (dayOfWeek === 6 || day === daysInMonth) {
+          // 마지막 주 남은 빈칸 채우기
+          while(currentWeekCells.length < 7) {
+            currentWeekCells.push(new TableCell({ 
+              children: [], 
+              width: { size: 100/7, type: WidthType.PERCENTAGE },
+              height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }
+            }));
+          }
+          calendarRows.push(new TableRow({ children: currentWeekCells }));
+          currentWeekCells = [];
+        }
+      }
+
+      // --- 3. 문서 생성 ---
+      const doc = new Document({
+        sections: [
+          {
+            properties: {}, 
+            children: [
+              // Page 1: 명세서
+              new Paragraph({
+                text: shopName,
+                alignment: AlignmentType.CENTER,
+              }),
+              new Paragraph({ text: "" }), 
+              new Paragraph({
+                children: [new TextRun({ text: `급여 명세서 (${employeeName} 님)`, bold: true, size: 44 })], 
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 }
+              }),
+              new Table({
+                rows: [
+                  new TableRow({
+                    children: [
+                      new TableCell({ children: [new Paragraph({ text: "항목", alignment: AlignmentType.CENTER })], width: { size: 4000, type: WidthType.DXA }, shading: { fill: "C0C0C0" } }),
+                      new TableCell({ children: [new Paragraph({ text: "내용", alignment: AlignmentType.CENTER })], width: { size: 6000, type: WidthType.DXA }, shading: { fill: "C0C0C0" } }),
+                    ]
+                  }),
+                  ...payslipRows
+                ],
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                alignment: AlignmentType.CENTER,
+              }),
+              new Paragraph({ 
+                children: [], 
+                pageBreakBefore: true 
+              }),
+
+              // Page 2: 근무확인표
+              new Paragraph({
+                text: `${year}년 ${month + 1}월 근무 상세 내역`,
+                spacing: { before: 400 }
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: "근무 확인표", bold: true, size: 40 })], 
+                spacing: { after: 200 }
+              }),
+              new Paragraph({
+                text: `성명: ${employeeName}`,
+                alignment: AlignmentType.RIGHT,
+                spacing: { after: 200 }
+              }),
+              new Table({
+                rows: [
+                  new TableRow({
+                    children: ['일', '월', '화', '수', '목', '금', '토'].map((d, i) => new TableCell({
+                      children: [new Paragraph({ 
+                        children: [new TextRun({ 
+                          text: d, 
+                          bold: true,
+                          color: i === 0 ? "FF0000" : i === 6 ? "0000FF" : "000000"
+                        })], 
+                        alignment: AlignmentType.CENTER 
+                      })],
+                      width: { size: 100/7, type: WidthType.PERCENTAGE },
+                      shading: { fill: "F0F0F0" }
+                    }))
+                  }),
+                  ...calendarRows
+                ],
+                width: { size: 100, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          },
+        ],
       });
 
-      saveAs(out, `급여명세서_${employeeName}_${startDate.substring(0, 7)}.docx`);
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `급여명세서_${employeeName}_${startDate.substring(0, 7)}.docx`);
 
     } catch (error: any) {
-      if (error.properties && error.properties.errors) {
-        console.error("Template Errors:", error.properties.errors);
-        const errorMessages = error.properties.errors.map((e: any) => e.message).join('\n');
-        alert(`템플릿 오류가 발생했습니다:\n${errorMessages}`);
-      } else {
-        console.error("Error generating payslip:", error);
-        alert("명세서 생성 중 오류가 발생했습니다.");
-      }
+      console.error("Error generating payslip:", error);
+      alert("명세서 생성 중 오류가 발생했습니다.");
     } finally {
       setIsGenerating(false);
     }
@@ -264,7 +495,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
           <p className="text-slate-400 text-[10px] mt-1 font-medium uppercase tracking-wider">Payroll Summary Report</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full md:w-auto">
-          {/* Download Dropdown */}
           <div className="relative" ref={menuRef}>
             <button 
               onClick={() => setIsDownloadMenuOpen(!isDownloadMenuOpen)}
@@ -287,16 +517,16 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
             {isDownloadMenuOpen && (
               <div className="absolute top-full left-0 mt-2 w-32 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2">
                 <button 
-                  onClick={generatePayslip}
+                  onClick={generatePDF}
                   className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 whitespace-nowrap"
                 >
-                  <span className="text-blue-500 text-sm">📄</span> Word (.docx)
+                  <span className="text-red-500 text-sm">📕</span> PDF (.pdf)
                 </button>
                 <button 
-                  onClick={generatePDF}
+                  onClick={generateDocx}
                   className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-2 border-t border-slate-50 whitespace-nowrap"
                 >
-                  <span className="text-red-500 text-sm">📕</span> PDF (.pdf)
+                  <span className="text-blue-500 text-sm">📄</span> Word (.docx)
                 </button>
               </div>
             )}
@@ -316,7 +546,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
       </div>
       
       <div className="p-4 md:p-8">
-        {/* 📅 주차별 상세 내역 (카드 그리드) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {weeklySummaries.map((weekSummary) => (
             <div key={weekSummary.weekNumber} className="group p-4 border border-slate-100 rounded-2xl bg-slate-50/30 hover:bg-white hover:shadow-xl hover:border-orange-100 transition-all duration-300">
@@ -357,13 +586,10 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
           ))}
         </div>
 
-        {/* 💰 월별 최종 합계 (영수증 스타일 - 상세 내역) */}
         <div className="relative bg-slate-50 rounded-2xl p-4 md:p-8 border-2 border-slate-100 overflow-hidden">
-          {/* 장식용 배경 요소 */}
           <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-orange-500/5 rounded-full blur-2xl"></div>
           
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* 좌측: 시간 요약 */}
             <div className="space-y-3">
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
                 <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">실제 근무</span>
@@ -383,7 +609,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
               </div>
             </div>
 
-            {/* 우측: 금액 요약 (세전/세후) */}
             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-2">
               <div className="flex justify-between items-center gap-4">
                 <span className="text-xs font-bold text-slate-400 whitespace-nowrap">지급액(세전)</span>
@@ -410,7 +635,6 @@ export default function PaySummary({ weeklySummaries, hourlyWage, employeeName }
         </div>
       </div>
       
-      {/* Footer - Receipt style jagged edge decoration */}
       <div className="h-2 w-full bg-slate-900 opacity-10 flex gap-1 px-1">
         {Array.from({ length: 40 }).map((_, i) => (
           <div key={i} className="flex-1 bg-white h-1 mt-1 rounded-full"></div>

@@ -19,6 +19,7 @@
     "@supabase/supabase-js": "^2.93.3",
     "@tailwindcss/postcss": "^4.1.18",
     "browser-image-compression": "^2.0.2",
+    "docx": "^9.5.1",
     "docxtemplater": "^3.67.6",
     "dotenv": "^17.2.3",
     "file-saver": "^2.0.5",

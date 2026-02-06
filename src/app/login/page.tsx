@@ -10,11 +10,11 @@ export default async function LoginPage(props: {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-2xl shadow-xl border border-slate-100">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-black tracking-tight text-slate-900">
-            Welcome Back
+          <h2 className="mt-6 text-4xl font-black tracking-tight text-slate-900">
+            <span className="text-orange-500">Smart</span> Pay
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
-            MOM'S TOUCH PAYROLL SYSTEM
+          <p className="mt-2 text-sm font-bold text-slate-500">
+            소상공인을 위한 간편 급여 정산 솔루션
           </p>
         </div>
         

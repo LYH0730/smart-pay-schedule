@@ -7,8 +7,11 @@ import DashboardClient from "../../components/DashboardClient";
 import SignOutButton from "../../components/SignOutButton";
 
 export default function DashboardPage() {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth(); // 0: 1월, 1: 2월...
+  const today = new Date();
+  // 🌟 [최적화] 사장님들은 보통 '지난 달'의 급여를 정산하므로 기본값을 지난 달로 설정
+  const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const currentYear = lastMonthDate.getFullYear();
+  const currentMonth = lastMonthDate.getMonth(); // 0: 1월, 1: 2월...
 
   // 🌟 [상태 설정] 연도, 월, 모델 선택 관리
   const [selectedYear, setSelectedYear] = useState(currentYear);
