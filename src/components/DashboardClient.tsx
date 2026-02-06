@@ -5,11 +5,11 @@ import imageCompression from 'browser-image-compression';
 import { Shift, WeeklyPayrollSummary } from '../types';
 import PaySummary from './PaySummary';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  calculateMonthlyPayroll, 
-  calculateShiftDurationMinutes, 
-  formatMinutesToHM, 
-  getAutoBreakMinutes 
+import {
+  calculateMonthlyPayroll,
+  calculateShiftDurationMinutes,
+  formatMinutesToHM,
+  getAutoBreakMinutes
 } from '../lib/payroll-utils';
 import { generateMockShifts } from '../lib/mock-data';
 
@@ -69,13 +69,13 @@ function EditableCell({ value, onUpdate, className = "" }: { value: string, onUp
 
 // 📱 아이폰 최적화: 시/분 통합 입력 셀
 function TimeInputCell({
-  hour, 
-  minute, 
-  onUpdate 
+  hour,
+  minute,
+  onUpdate
 }: {
-  hour: string, 
-  minute: string, 
-  onUpdate: (h: string, m: string) => void 
+  hour: string,
+  minute: string,
+  onUpdate: (h: string, m: string) => void
 }) {
   const [localValue, setLocalValue] = useState(`${hour}:${minute}`);
 
@@ -137,10 +137,10 @@ async function retryWithBackoff<T>(
 }
 
 export default function DashboardClient({
-  selectedYear, 
-  selectedMonth, 
+  selectedYear,
+  selectedMonth,
   selectedModel,
-  onAnalyzedMonthYearChange 
+  onAnalyzedMonthYearChange
 }: DashboardClientProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -434,12 +434,15 @@ export default function DashboardClient({
         });
 
       if (dayMessages.length > 0) {
-        duplicateMessages.push(`👤 ${name} 사원:\n${dayMessages.join('\n')}`);
+        duplicateMessages.push(`👤 ${name} 사원:\n${dayMessages.join('\
+')}`);
       }
     });
 
     if (duplicateMessages.length > 0) {
-      const message = `⚠️ 하루 2회 이상 근무 기록이 발견되었습니다.\n(시간을 확인하여 중복 입력인지, 분할 근무인지 확인하세요)\n\n${duplicateMessages.join('\n\n')}\n\n내용이 맞다면 [확인]을, 입력 실수라면 [취소]를 누른 뒤 수정해주세요.`;
+      const message = `⚠️ 하루 2회 이상 근무 기록이 발견되었습니다.\n(시간을 확인하여 중복 입력인지, 분할 근무인지 확인하세요)\n\n${duplicateMessages.join('\
+\
+')}\n\n내용이 맞다면 [확인]을, 입력 실수라면 [취소]를 누른 뒤 수정해주세요.`;
       if (!confirm(message)) return;
     }
 
@@ -451,9 +454,9 @@ export default function DashboardClient({
     setAddingState(employeeName);
     setNewShiftData({
       day: '', 
-      start_hour: '09', start_minute: '00', 
-      end_hour: '18', end_minute: '00', 
-      break_minutes: '60'
+      start_hour: '', start_minute: '', 
+      end_hour: '', end_minute: '', 
+      break_minutes: ''
     });
   };
 
@@ -504,7 +507,7 @@ export default function DashboardClient({
       if (s.id !== shiftId) return s;
       const updated = { ...s, [field]: value };
       
-      // 날짜 수정 시 숫자 이외의 문자 제거 등 처리 가능 (여기선 EditableCell에서 텍스트로 들어옴)
+      // 날짜 수정 시 숫자 이외의 문자 제거 등 처리 가능 (여기선 EditableCell에서 텍스트로 들어옴) 
       
       if (field === 'break_minutes') updated.is_break_manual = true;
       if (['start_hour', 'start_minute', 'end_hour', 'end_minute'].includes(field as string) && !updated.is_break_manual) {
@@ -585,7 +588,7 @@ export default function DashboardClient({
               <label className="flex items-center gap-2 cursor-pointer group" title={useCompression ? "이미지 용량을 줄여 전송 속도를 높입니다." : "이미지 원본 그대로 전송합니다."} >
                 <div className="relative">
                   <input 
-                    type="checkbox" 
+                    type="checkbox"
                     checked={useCompression}
                     onChange={(e) => setUseCompression(e.target.checked)}
                     className="sr-only peer"
@@ -700,7 +703,7 @@ export default function DashboardClient({
                                 minute={shift.end_minute} 
                                 onUpdate={(h, m) => {
                                   handleShiftUpdate(shift.id, 'end_hour', h);
-                                  handleShiftUpdate(shift.id, 'start_minute', m);
+                                  handleShiftUpdate(shift.id, 'end_minute', m); // 🌟 오타 수정: start_minute -> end_minute
                                 }} 
                               />
                             </div>
@@ -760,7 +763,7 @@ export default function DashboardClient({
                                   } else if (val.length <= 4) {
                                     setNewShiftData({...newShiftData, start_hour: val.substring(0, 2), start_minute: val.substring(2, 4)});
                                   }
-                                }} 
+                                }}
                               />
                               <span className="text-slate-300">→</span>
                               <input 
@@ -775,7 +778,7 @@ export default function DashboardClient({
                                   } else if (val.length <= 4) {
                                     setNewShiftData({...newShiftData, end_hour: val.substring(0, 2), end_minute: val.substring(2, 4)});
                                   }
-                                }} 
+                                }}
                               />
                             </div>
                           </td>
