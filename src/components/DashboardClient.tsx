@@ -538,15 +538,15 @@ export default function DashboardClient({
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto bg-gray-50 min-h-screen font-sans text-slate-900 relative">
       <header className="mb-10 text-center">
-        <div className="inline-flex items-center justify-center gap-2 group cursor-pointer">
+        <div className="inline-flex items-center justify-center gap-2 group cursor-pointer w-full">
           <input 
             type="text" 
             value={shopName} 
             onChange={(e) => handleShopNameChange(e.target.value)} 
-            className="text-4xl font-black text-slate-800 tracking-tight text-center bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-all w-auto min-w-[200px]"
+            className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 tracking-tight text-center bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-all w-full max-w-[90vw]"
             placeholder="가게 이름을 입력하세요"
           />
-          <span className="text-2xl opacity-0 group-hover:opacity-50 transition-opacity">✏️</span>
+          <span className="text-xl opacity-0 group-hover:opacity-50 transition-opacity hidden md:inline">✏️</span>
         </div>
         <p className="text-slate-500 font-medium mt-2">
           <span className="text-orange-500 font-bold">Smart Pay</span> 급여 정산 시스템
