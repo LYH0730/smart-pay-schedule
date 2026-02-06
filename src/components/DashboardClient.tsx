@@ -315,6 +315,7 @@ export default function DashboardClient({
 
   const handleAnalyzeAll = async () => {
     if (selectedFiles.length === 0) return setError("분석할 이미지를 선택하세요.");
+    setAddingState(null); // 🌟 분석 시작 시 수동 입력 모드 종료
     setIsLoading(true);
     setError(null);
     setShifts([]);
@@ -521,6 +522,7 @@ export default function DashboardClient({
   };
 
   const handleDevGenerate = (scenario: 'under-15' | 'full-time' | 'random') => {
+    setAddingState(null); // 🌟 수동 입력 모드 종료 (충돌 방지)
     const mockShifts = generateMockShifts(selectedYear, selectedMonth, scenario);
     // 자동 휴게 시간 적용
     const shiftsWithBreak = mockShifts.map(s => ({

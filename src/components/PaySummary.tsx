@@ -19,7 +19,8 @@ import {
   AlignmentType,
   HeadingLevel,
   BorderStyle,
-  VerticalAlign
+  VerticalAlign,
+  HeightRule
 } from 'docx';
 
 interface PaySummaryProps {
@@ -348,14 +349,13 @@ export default function PaySummary({
       const calendarRows: TableRow[] = [];
       let currentWeekCells: TableCell[] = [];
       
-      const CALENDAR_CELL_HEIGHT = 2500; // 🌟 1500 -> 2500 (약 4.4cm) 상향
+      const CALENDAR_CELL_HEIGHT = 1500; // 🌟 2500 -> 1500 복구 (더 컴팩트한 레이아웃)
 
       // 첫 주 빈칸
       for (let i = 0; i < firstDay; i++) {
         currentWeekCells.push(new TableCell({ 
           children: [], 
-          width: { size: 100/7, type: WidthType.PERCENTAGE },
-          height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }
+          width: { size: 100/7, type: WidthType.PERCENTAGE }
         }));
       }
 
@@ -380,7 +380,6 @@ export default function PaySummary({
         currentWeekCells.push(new TableCell({
           children: cellChildren,
           width: { size: 100/7, type: WidthType.PERCENTAGE }, 
-          height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }, 
           verticalAlign: VerticalAlign.TOP,
         }));
 
@@ -389,11 +388,13 @@ export default function PaySummary({
           while(currentWeekCells.length < 7) {
             currentWeekCells.push(new TableCell({ 
               children: [], 
-              width: { size: 100/7, type: WidthType.PERCENTAGE },
-              height: { value: CALENDAR_CELL_HEIGHT, rule: "atLeast" }
+              width: { size: 100/7, type: WidthType.PERCENTAGE }
             }));
           }
-          calendarRows.push(new TableRow({ children: currentWeekCells }));
+          calendarRows.push(new TableRow({ 
+            children: currentWeekCells,
+            height: { value: CALENDAR_CELL_HEIGHT, rule: HeightRule.ATLEAST } // 🌟 여기에 높이 설정
+          }));
           currentWeekCells = [];
         }
       }
