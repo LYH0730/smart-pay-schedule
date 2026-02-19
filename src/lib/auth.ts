@@ -56,17 +56,18 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   
-  // 수정 포인트: useSecureCookies를 명시하여 프록시 환경임을 NextAuth에 알립니다.
-  useSecureCookies: true, 
+  // 수정: 운영 환경(HTTPS)에서만 true, 로컬은 false
+  useSecureCookies: process.env.NODE_ENV === "production", 
   
   cookies: {
     sessionToken: {
-      name: `__Secure-next-auth.session-token`, // HTTPS 환경 표준 이름
+      // 운영 환경에서는 __Secure- 를 붙이고, 로컬에서는 기본 이름을 사용
+      name: process.env.NODE_ENV === "production" ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === "production", // 운영 환경에서만 secure 적용
       },
     },
   },
