@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import { useState } from 'react';
 import DashboardClient from "../../components/DashboardClient";
 import SignOutButton from "../../components/SignOutButton";

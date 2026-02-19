@@ -1,23 +1,14 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
 export default function SignOutButton() {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleSignOut = async () => {
     setIsLoggingOut(true);
-    const supabase = createClient();
-    
-    // 1. 브라우저 단에서 세션 삭제 (가장 확실함)
-    await supabase.auth.signOut();
-    
-    // 2. 라우터 캐시 비우기 및 로그인 페이지로 이동
-    router.refresh(); 
-    router.replace('/login');
+    await signOut({ callbackUrl: '/login' });
   };
 
   return (

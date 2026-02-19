@@ -1,21 +1,21 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useSession } from 'next-auth/react'; 
 import imageCompression from 'browser-image-compression';
 import { WeeklyPayrollSummary } from '../types';
 import PaySummary from './PaySummary';
-import { createClient } from '@/lib/supabase/client';
-import {
-  calculateMonthlyPayroll,
-  getAutoBreakMinutes
-} from '../lib/payroll-utils';
+import { getAutoBreakMinutes } from '../lib/payroll-utils';
+import { calculatePayrollServer } from '@/app/actions/payroll';
 import { generateMockShifts } from '../lib/mock-data';
+import { getShopName } from '@/app/actions/user'; // 🌟 getShopName 추가
 
 // Sub-components
 import GlobalSettings from './dashboard/GlobalSettings';
 import ImageUploader from './dashboard/ImageUploader';
 import AttendanceTable from './dashboard/AttendanceTable';
 import DevTools from './dashboard/DevTools';
+import ShopNameEditor from './ShopNameEditor'; 
 
 interface DashboardClientProps {
   selectedYear: number;
@@ -65,6 +65,7 @@ export default function DashboardClient({
   selectedModel,
   onAnalyzedMonthYearChange
 }: DashboardClientProps) {
+  const { data: session } = useSession(); 
   const [attendanceData, setAttendanceData] = useState<Record<number, any[]>>(createInitialAttendance());
   const [employeeName, setEmployeeName] = useState<string>("직원");
   const [hasStarted, setHasStarted] = useState(false);
@@ -72,7 +73,6 @@ export default function DashboardClient({
   const [countdown, setCountdown] = useState(40);
   const abortControllerRef = useRef<AbortController | null>(null);
   
-  // 🌟 에러 추적 상태 (key: "day-index-field", value: "error message")
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [isCompressing, setIsCompressing] = useState(false);
@@ -87,37 +87,29 @@ export default function DashboardClient({
   const [breakThreshold, setBreakThreshold] = useState(480);
   const [breakDeduction, setBreakDeduction] = useState(60);
   const [calculatedPaySummary, setCalculatedPaySummary] = useState<WeeklyPayrollSummary[]>([]);
+  
   const [shopName, setShopName] = useState("나의 가게");
-  const supabase = createClient();
 
-  // 🌟 데이터 변경 시 실시간 유효성 검사 엔진
   useEffect(() => {
     const newErrors: Record<string, string> = {};
     const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
 
     Object.entries(attendanceData).forEach(([dayStr, records]) => {
       const day = parseInt(dayStr);
-      // 유효 날짜 내의 데이터만 검사
       if (day <= lastDayOfMonth) {
         records.forEach((r, i) => {
           const prefix = `${day}-${i}`;
-          
-          // 1. 시간 범위 검사
           if (r.sh && (parseInt(r.sh) < 0 || parseInt(r.sh) > 23)) newErrors[`${prefix}-sh`] = "0~23시 사이여야 합니다.";
           if (r.sm && (parseInt(r.sm) < 0 || parseInt(r.sm) > 59)) newErrors[`${prefix}-sm`] = "0~59분 사이여야 합니다.";
           if (r.eh && (parseInt(r.eh) < 0 || parseInt(r.eh) > 23)) newErrors[`${prefix}-eh`] = "0~23시 사이여야 합니다.";
           if (r.em && (parseInt(r.em) < 0 || parseInt(r.em) > 59)) newErrors[`${prefix}-em`] = "0~59분 사이여야 합니다.";
 
-          // 2. 휴게 시간 검사
           if (r.sh && r.eh && r.brk) {
             const startMins = parseInt(r.sh) * 60 + parseInt(r.sm || "0");
             const endMins = parseInt(r.eh) * 60 + parseInt(r.em || "0");
             let diff = endMins - startMins;
-            if (diff < 0) diff += 24 * 60; // 자정 넘김 허용
-            
-            if (parseInt(r.brk) > diff) {
-              newErrors[`${prefix}-brk`] = "휴게 시간이 근무 시간보다 깁니다.";
-            }
+            if (diff < 0) diff += 24 * 60; 
+            if (parseInt(r.brk) > diff) newErrors[`${prefix}-brk`] = "휴게 시간이 근무 시간보다 깁니다.";
           }
         });
       }
@@ -146,27 +138,30 @@ export default function DashboardClient({
     });
   }, [breakThreshold, breakDeduction]);
 
+  // 🌟 세션 로드 시 DB에서 최신 가게 이름 가져오기
   useEffect(() => {
-    const loadShopName = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('profiles').select('shop_name').eq('id', user.id).single();
-      if (data?.shop_name) setShopName(data.shop_name);
+    const fetchShopName = async () => {
+      if (session?.user) {
+        // 1. 일단 세션에 있는 이름 먼저 보여줌 (빠른 로딩)
+        if (session.user.name) {
+          setShopName(session.user.name);
+        }
+        
+        // 2. 서버에서 최신 데이터 가져와서 업데이트 (정확성)
+        const res = await getShopName((session.user as any).id);
+        if (res.success && res.name) {
+          setShopName(res.name);
+        }
+      }
     };
-    loadShopName();
-  }, []);
-
-  const handleShopNameChange = async (newName: string) => {
-    setShopName(newName); 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from('profiles').update({ shop_name: newName }).eq('id', user.id);
-  };
+    fetchShopName();
+  }, [session]);
 
   useEffect(() => {
     setHourlyWage(selectedYear === 2026 ? 10320 : 10030);
   }, [selectedYear]);
 
+  // ... (handleFileChange, handleAnalyzeAll 등 기존 함수들 유지) ...
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
@@ -265,7 +260,7 @@ export default function DashboardClient({
     });
   };
 
-  const handleCalculatePay = () => {
+  const handleCalculatePay = async () => {
     const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
     const invalidDaysWithData: number[] = [];
     Object.entries(attendanceData).forEach(([dayStr, records]) => {
@@ -289,8 +284,23 @@ export default function DashboardClient({
         }
       });
     });
+    
     if (validShifts.length === 0) return alert("계산할 유효한 데이터가 없습니다.");
-    setCalculatedPaySummary(calculateMonthlyPayroll(validShifts, hourlyWage, selectedYear, selectedMonth));
+    
+    setIsLoading(true);
+    try {
+      const result = await calculatePayrollServer(validShifts, hourlyWage, selectedYear, selectedMonth);
+      if (result.success && result.data) {
+        setCalculatedPaySummary(result.data.summaries);
+      } else {
+        alert(result.error || "급여 계산 중 오류가 발생했습니다.");
+      }
+    } catch (err) {
+      console.error("Calculation error:", err);
+      alert("서버와 통신 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDevGenerate = (scenario: 'under-15' | 'full-time' | 'random') => {
@@ -317,7 +327,16 @@ export default function DashboardClient({
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto bg-gray-50 min-h-screen font-sans text-slate-900 relative">
       <header className="mb-10 text-center">
-        <input type="text" value={shopName} onChange={(e) => handleShopNameChange(e.target.value)} className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 tracking-tight text-center bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-orange-500 outline-none transition-all w-full max-w-[90vw]" placeholder="가게 이름을 입력하세요" />
+        {/* 🌟 기존 input을 ShopNameEditor로 교체 */}
+        {session?.user ? (
+          <ShopNameEditor 
+            userId={(session.user as any).id} 
+            initialName={shopName} 
+          />
+        ) : (
+          // 세션 로딩 중일 때 스켈레톤 UI
+          <div className="h-10 w-48 bg-slate-200 rounded-lg animate-pulse mx-auto" />
+        )}
         <p className="text-slate-500 font-medium mt-2"><span className="text-orange-500 font-bold">Smart Pay</span> 급여 정산 시스템</p>
       </header>
 
@@ -326,7 +345,8 @@ export default function DashboardClient({
           <GlobalSettings hourlyWage={hourlyWage} setHourlyWage={setHourlyWage} breakThreshold={breakThreshold} setBreakThreshold={setBreakThreshold} breakDeduction={breakDeduction} setBreakDeduction={setBreakDeduction} />
           <ImageUploader useCompression={useCompression} setUseCompression={setUseCompression} isCompressing={isCompressing} isLoading={isLoading} handleFileChange={handleFileChange} filePreviews={filePreviews} setModalImageSrc={setModalImageSrc} setIsModalOpen={setIsModalOpen} selectedFilesCount={selectedFiles.length} onAnalyze={handleAnalyzeAll} error={error} />
         </aside>
-
+        
+        {/* ... 나머지 JSX (main 등) ... */}
         <main className="lg:col-span-7 relative">
           {!hasStarted ? (
             <div className="h-full min-h-[500px] flex flex-col items-center justify-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-8 text-center animate-in fade-in zoom-in duration-500">

@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 사장님(유저) 테이블
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String    // 암호화된 비밀번호 저장
+  shopName      String    @default("나의 가게")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // 나중에 확장할 때 필요한 관계 (예: 근무 기록들)
+  // Attendances Attendance[] 
+}
