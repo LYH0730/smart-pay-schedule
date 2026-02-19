@@ -30,10 +30,13 @@ export default function ImageUploader({
   error
 }: ImageUploaderProps) {
   return (
-    <section className="bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
-      <div className="flex justify-between items-center mb-4">
+    <section className="bg-white p-4 md:p-5 rounded-2xl shadow-xl border border-slate-100">
+      <div className="flex flex-col gap-3 mb-5">
         <h2 className="text-lg font-bold">📸 근무표 업로드</h2>
-        <label className="flex items-center gap-2 cursor-pointer group" title={useCompression ? "이미지 용량을 줄여 전송 속도를 높입니다." : "이미지 원본 그대로 전송합니다."}>
+        <label className="flex items-center justify-between p-2 bg-slate-50 rounded-xl cursor-pointer group" title={useCompression ? "이미지 용량을 줄여 전송 속도를 높입니다." : "이미지 원본 그대로 전송합니다."}>
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">
+            {useCompression ? "빠른 전송 모드 (ON)" : "원본 전송 모드 (OFF)"}
+          </span>
           <div className="relative">
             <input 
               type="checkbox" 
@@ -41,11 +44,8 @@ export default function ImageUploader({
               onChange={(e) => setUseCompression(e.target.checked)} 
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
           </div>
-          <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600 transition-colors">
-            {useCompression ? "빠른 전송 (압축 ON)" : "원본 전송 (압축 OFF)"}
-          </span>
         </label>
       </div>
       <div className="relative">

@@ -35,15 +35,18 @@ export async function POST(req: NextRequest) {
 
     allParts.push({
       text: `
-        명령: 이미지 속 사원 1명의 12월 전체 출퇴근 기록을 추출하여 '압축된 JSON' 배열로 반환하라.
-        
+        명령: 제공된 2장의 이미지(출퇴근 카드 앞/뒷면)에서 사원의 성명과 일자별 출퇴근 기록을 추출하여 통합된 JSON으로 반환하라.
+
         [필독 지침]
-        1. 성명 인식: 성명란의 글자를 정확히 읽을 것. 특히 '엔니'를 '언니'로 오인하지 마라.
-        2. 이미지 구성: 제공된 2장의 이미지는 각각 상반기(1~15일)와 하반기(16~31일) 기록이다. 두 장의 데이터를 합쳐서 하나의 통합 배열로 만들어라.
-        3. 필기 우선: 도장 옆에 볼펜으로 수정된 숫자(예: 10:30)가 있다면 해당 숫자를 도장보다 우선하여 기록하라.
-        4. 압축 출력: 토큰 절약을 위해 JSON 결과값에서 줄바꿈, 공백, 들여쓰기를 절대 사용하지 말고 모든 데이터를 한 줄(Minified)로 붙여서 출력하라.
-        
-        형식: [{"name":"이름","day":"DD","sh":"HH","sm":"mm","eh":"HH","em":"mm"}]
+        1. 이미지 구성: 2장의 이미지는 각각 상반기(1~15일)와 하반기(16~31일) 기록이다. 하나의 'attendance' 객체로 합쳐라.
+        2. 성명 인식: 이미지 최상단의 이름을 정확히 읽어라. ('엔니'를 '언니'로 오인 주의)
+        3. 1:1 행(Row) 매칭 (매우 중요): 인접한 날짜(예: 9일과 10일)의 데이터가 위아래로 섞이거나 병합되지 않도록 주의하라. 맨 왼쪽의 '날짜 숫자'와 완벽하게 동일한 가로 선상에 있는 시간만 해당 날짜에 넣어라.
+        4. 시간 추출 패턴 주의: 도장에 찍힌 '날짜(DD)+시간(HH:mm)' (예: '0216:55')에서 앞의 세로 숫자(02)는 무시하고 뒤의 시간(16:55)만 추출하라. 볼펜 수정이 있다면 최우선으로 하라.
+        5. 데이터 구조 단순화 (중요): 시/분을 나누지 말고 "HH:mm" 형태의 단일 문자열로 출력하라. 출근은 "s", 퇴근은 "e" 키를 사용하라. (예: {"s":"10:25", "e":"16:55"})
+        6. 1~31일 고정 슬롯: 데이터가 없는 날짜는 빈 배열([])로 처리하여 31개 키를 무조건 모두 포함하라.
+        7. 압축 출력: 공백과 줄바꿈 없는 한 줄(Minified)로 출력하라.
+
+        형식: {"name":"이름","attendance":{"1":[],"2":[{"s":"10:25","e":"16:55"}],"31":[]}}
       `,
     });
 
@@ -57,17 +60,17 @@ export async function POST(req: NextRequest) {
     const text = response.text();
     console.log("AI Response (Raw):", text);
 
-    let parsedShifts = [];
+    let analyzedData: any = null;
     let jsonString = text.trim();
-    let isTruncated = false; // 🌟 잘림 여부 플래그
+    let isTruncated = false;
 
     try {
-      parsedShifts = JSON.parse(jsonString);
+      analyzedData = JSON.parse(jsonString);
     } catch (parseError) {
       console.warn("JSON 파싱 실패. 잘린 데이터 복구 시도 중...");
-      isTruncated = true; // 복구 로직 진입 시 플래그 설정
+      isTruncated = true;
 
-      const startIndex = jsonString.indexOf('[');
+      const startIndex = jsonString.indexOf('{');
       if (startIndex !== -1) {
         let potentialJson = jsonString.substring(startIndex);
         let lastValidIndex = -1;
@@ -81,27 +84,27 @@ export async function POST(req: NextRequest) {
 
         if (lastValidIndex !== -1) {
           potentialJson = potentialJson.substring(0, lastValidIndex + 1);
-          potentialJson = potentialJson.replace(/,\s*$/, ""); 
-          if (potentialJson.endsWith('}')) {
-            potentialJson += ']';
+          // 객체가 닫히지 않았을 경우를 대비한 최소한의 보정
+          if (!potentialJson.endsWith('}')) {
+            potentialJson += '}}'; 
           }
           try {
-            parsedShifts = JSON.parse(potentialJson);
+            analyzedData = JSON.parse(potentialJson);
             console.log("잘린 JSON 복구 성공");
           } catch (e) {
-            parsedShifts = [];
+            analyzedData = null;
           }
         }
       }
     }
 
-    // 🌟 [2차 방어선] 이름 보정 로직 (AI가 '언니'라고 응답해도 '엔니'로 강제 수정)
-    const correctedShifts = (parsedShifts || []).map((s: any) => ({
-      ...s,
-      name: s.name === '언니' ? '엔니' : s.name
-    }));
+    // 이름 보정 및 기본 구조 보장
+    if (analyzedData) {
+      if (analyzedData.name === '언니') analyzedData.name = '엔니';
+      if (!analyzedData.attendance) analyzedData.attendance = {};
+    }
 
-    return NextResponse.json(correctedShifts, {
+    return NextResponse.json(analyzedData, {
       headers: isTruncated ? { 'X-AI-Response-Truncated': 'true' } : {}
     });
 

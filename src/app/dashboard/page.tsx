@@ -17,8 +17,8 @@ export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   
-  // 🌟 [모델 최적화] 현재 쿼터가 남아있는 gemini-2.5-flash를 기본값으로 설정
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-flash');
+  // 🌟 [모델 최적화] 기본 분석 엔진을 Gemini 3 Flash로 설정
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3-flash-preview');
   
   const [isMonthManuallySet, setIsMonthManuallySet] = useState(false);
 
@@ -87,8 +87,8 @@ export default function DashboardPage() {
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full p-3 bg-slate-50 border-none rounded-xl font-bold text-orange-600 focus:ring-2 focus:ring-orange-400 outline-none"
               >
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                 <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                 <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
               </select>
             </div>
