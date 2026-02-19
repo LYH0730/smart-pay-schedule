@@ -39,6 +39,4 @@ jobs:
             npm run build
             
             # 5. PM2 재시작
-            # pm2 restart all 보다는 특정 서비스 이름만 재시작하는 것이 다른 서비스에 영향을 주지 않아 안전합니다.
-            # 서비스 이름을 프로젝트명으로 지정하는 것을 추천합니다.
-            pm2 restart smart-pay-schedule || pm2 start npm --name "smart-pay-schedule" -- start
+            pm2 restart all
