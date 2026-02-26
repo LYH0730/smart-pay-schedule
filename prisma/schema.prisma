@@ -1,5 +1,9 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // binaryTargets를 추가하여 빌드 환경과 운영 환경 모두에서 엔진이 작동하도록 합니다.
+  // native: 현재 빌드 중인 환경 (GitHub Actions)
+  // debian-openssl-3.0.x: Ubuntu 22.04 및 24.04 환경 대응
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
