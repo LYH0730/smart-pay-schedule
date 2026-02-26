@@ -7,7 +7,6 @@ import { createBrowserClient } from '@supabase/ssr';
 export default function SignOutButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // 브라우저용 Supabase 클라이언트 생성
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -15,15 +14,21 @@ export default function SignOutButton() {
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
-    
     setIsLoggingOut(true);
 
     try {
-      // 1. Supabase 로그아웃 (이걸 해야 미들웨어에서 user가 null이 됩니다)
+      // 1. Supabase 로그아웃 실행
       await supabase.auth.signOut();
 
-      // 2. Next-Auth 로그아웃 및 페이지 리다이렉트
-      // redirect: true는 브라우저를 완전히 새로고침하며 이동시켜 좀비 세션을 방지합니다.
+      // 2. [강력 조치] 로컬 스토리지 및 세션 스토리지 강제 초기화
+      // Supabase 세션 데이터가 여기에 남아 미들웨어를 속이는 경우가 많습니다.
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+
+      // 3. Next-Auth 로그아웃 및 리다이렉트
+      // redirect: true를 주어 페이지를 아예 새로 고침(Hard Reload)하며 이동합니다.
       await signOut({ 
         callbackUrl: '/login',
         redirect: true 
@@ -31,7 +36,8 @@ export default function SignOutButton() {
 
     } catch (error) {
       console.error('Logout error:', error);
-      setIsLoggingOut(false);
+      // 에러 시 강제 새로고침으로 세션 꼬임 방지
+      window.location.href = '/login';
     }
   };
 
