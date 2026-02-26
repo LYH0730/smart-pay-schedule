@@ -2,30 +2,37 @@
 
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
-
-const clearAuthCookies = () => {
-  const cookiesToClear = [
-    'next-auth.session-token',
-    '__Secure-next-auth.session-token',
-    'next-auth.csrf-token',
-    'next-auth.callback-url'
-  ];
-
-  cookiesToClear.forEach(cookieName => {
-    document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-    if (typeof window !== 'undefined') {
-      document.cookie = `${cookieName}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-    }
-  });
-};
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function SignOutButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // 브라우저용 Supabase 클라이언트 생성
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const handleSignOut = async () => {
+    if (isLoggingOut) return;
+    
     setIsLoggingOut(true);
-    clearAuthCookies(); // 좀비 쿠키 방지를 위한 수동 클린업
-    await signOut({ callbackUrl: '/login' });
+
+    try {
+      // 1. Supabase 로그아웃 (이걸 해야 미들웨어에서 user가 null이 됩니다)
+      await supabase.auth.signOut();
+
+      // 2. Next-Auth 로그아웃 및 페이지 리다이렉트
+      // redirect: true는 브라우저를 완전히 새로고침하며 이동시켜 좀비 세션을 방지합니다.
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: true 
+      });
+
+    } catch (error) {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
   };
 
   return (
