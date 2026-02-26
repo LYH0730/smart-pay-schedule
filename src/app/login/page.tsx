@@ -65,7 +65,7 @@ function LoginFormContent() {
             <span className="text-orange-500">Smart</span> Pay
           </h2>
           <p className="mt-2 text-sm font-bold text-slate-500">
-            소상공인을 위한 간편 급여 정산 솔루션
+            소상공인을 위한 간편 급여 정산 솔루션입니다
           </p>
         </div>
         
