@@ -1,42 +1,61 @@
-name: Deploy to G530 Server
+name: Deploy to Home Server
 
 on:
   push:
-    branches: [ main ] # main 브랜치에 push될 때 실행
+    branches: [ main ] # main 브랜치에 코드가 올라오면 자동 실행
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest # 1. 깃허브의 클라우드 컴퓨터 빌려오기
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Execute remote ssh commands
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20' # 현재 사용 중인 Node 버전에 맞춤
+
+      # 2. 깃허브 클라우드에서 패키지 설치 및 빌드 진행
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Prisma Generate
+        run: npx prisma generate
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          # Next.js 빌드 시 환경변수가 필요할 수 있으므로 임시 더미 값 세팅
+          DATABASE_URL: "postgresql://dummy"
+          NEXT_PUBLIC_SUPABASE_URL: "http://dummy"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy"
+
+      # 3. 완성된 결과물만 리눅스 서버로 전송 (SCP)
+      - name: Copy files to Linux Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.REMOTE_PORT }}
+          # 빌드된 결과물과 실행에 꼭 필요한 파일들만 콕 집어서 전송
+          source: ".next,public,package.json,package-lock.json,prisma"
+          target: "~/projects/smart-pay-schedule"
+
+      # 4. 리눅스 서버에 접속해서 서버 재시작 (SSH)
+      - name: Execute remote ssh commands to Restart
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.REMOTE_PORT }}
-          # G530 셀러론 서버를 위한 최적화 스크립트
           script: |
             cd ~/projects/smart-pay-schedule
-            
-            # 1. 최신 코드 가져오기
-            git pull origin main
-            
-            # 2. 의존성 설치
-            npm install
-            
-            # 3. Prisma 설정 (매우 중요)
-            # - generate: Prisma Client를 현재 리눅스 환경에 맞게 재생성
-            # - migrate deploy: 기존 데이터를 유지하며 DB 설계도만 업데이트
+            # 운영에 필요한 가벼운 패키지만 설치 (--production)
+            npm ci --production
             npx prisma generate
-            npx prisma migrate deploy
-            
-            # 4. 빌드 (메모리 부족 방지를 위해 Node 옵션 추가 가능)
-            # 만약 빌드 중 서버가 멈추면 앞에 NODE_OPTIONS="--max-old-space-size=2048" 를 붙여주세요.
-            npm run build
-            
-            # 5. PM2 재시작
+            # 서버 재시작
             pm2 restart all
