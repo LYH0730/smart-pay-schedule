@@ -3,11 +3,28 @@
 import { signOut } from 'next-auth/react';
 import { useState } from 'react';
 
+const clearAuthCookies = () => {
+  const cookiesToClear = [
+    'next-auth.session-token',
+    '__Secure-next-auth.session-token',
+    'next-auth.csrf-token',
+    'next-auth.callback-url'
+  ];
+
+  cookiesToClear.forEach(cookieName => {
+    document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+    if (typeof window !== 'undefined') {
+      document.cookie = `${cookieName}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+    }
+  });
+};
+
 export default function SignOutButton() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleSignOut = async () => {
     setIsLoggingOut(true);
+    clearAuthCookies(); // 좀비 쿠키 방지를 위한 수동 클린업
     await signOut({ callbackUrl: '/login' });
   };
 
