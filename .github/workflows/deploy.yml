@@ -31,16 +31,20 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: "http://dummy"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "dummy"
 
-      - name: Copy files to Linux Server
+      # 1. standalone 결과물만 압축해서 전송 (압축 대상 파일 수가 극적으로 줄어듭니다)
+      - name: Copy standalone files to Linux Server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.REMOTE_PORT }}
-          source: ".next,public,package.json,package-lock.json,prisma,next.config.js"
+          # .next/standalone 안의 내용물과 static, public만 보냅니다.
+          source: ".next/standalone, .next/static, public, prisma"
           target: "~/projects/smart-pay-schedule"
+          strip_components: 2 # .next/standalone 경로를 제거하고 전송
 
+      # 2. 리눅스 서버에서 마무리 작업
       - name: Execute remote ssh commands
         uses: appleboy/ssh-action@master
         with:
@@ -50,6 +54,10 @@ jobs:
           port: ${{ secrets.REMOTE_PORT }}
           script: |
             cd ~/projects/smart-pay-schedule
-            npm ci --production --prefer-offline
+            # standalone 모드는 node_modules를 자체 포함하므로 npm ci가 필요 없습니다!
+            # 정적 파일 경로 수정을 위해 이동 (standalone 구조상 필요)
+            cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+            cp -r public .next/standalone/ 2>/dev/null || true
+            
             npx prisma generate
             pm2 restart all
