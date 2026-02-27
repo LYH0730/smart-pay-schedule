@@ -125,12 +125,14 @@ export default function DashboardClient({
     return () => clearInterval(timer);
   }, [isLoading, countdown]);
 
+
+
   useEffect(() => {
     setAttendanceData(prev => {
       const next = { ...prev };
       Object.keys(next).forEach(day => {
         next[Number(day)] = next[Number(day)].map(r => {
-          if (r.isManual) return r;
+          if (r.isManual) return r; // 수동 입력된 휴게시간은 건드리지 않음
           return { ...r, brk: String(getAutoBreakMinutes(r.sh, r.sm, r.eh, r.em, breakThreshold, breakDeduction)) };
         });
       });
@@ -230,15 +232,22 @@ export default function DashboardClient({
   const handleUpdateRecord = (day: number, index: number, field: string, value: string) => {
     setAttendanceData(prev => {
       const dayRecords = [...(prev[day] || [])];
-      if (dayRecords.length === 0) dayRecords.push({ id: `manual-${day}-${Date.now()}`, sh: "", sm: "", eh: "", em: "", brk: "0", isManual: false });
-      if (dayRecords[index]) {
-        const updated = { ...dayRecords[index], [field]: value };
-        if (field === 'brk') updated.isManual = true;
-        if (['sh', 'sm', 'eh', 'em'].includes(field) && !updated.isManual) {
+      if (dayRecords.length === 0) {
+        dayRecords.push({ id: `manual-${day}-${Date.now()}`, sh: "", sm: "", eh: "", em: "", brk: "0", isManual: false });
+      }
+      
+      const updated = { ...dayRecords[index] };
+      updated[field] = value;
+
+      if (field === 'brk') {
+        updated.isManual = true;
+      } else if (['sh', 'sm', 'eh', 'em'].includes(field)) {
+        if (!updated.isManual) {
           updated.brk = String(getAutoBreakMinutes(updated.sh, updated.sm || "00", updated.eh, updated.em || "00", breakThreshold, breakDeduction));
         }
-        dayRecords[index] = updated;
       }
+      
+      dayRecords[index] = updated;
       return { ...prev, [day]: dayRecords };
     });
   };
@@ -315,6 +324,8 @@ export default function DashboardClient({
     setHasStarted(true);
   };
 
+
+
   const flattenedShiftsForSummary = useMemo(() => {
     const shifts: any[] = [];
     Object.entries(attendanceData).forEach(([dayStr, records]) => {
@@ -384,7 +395,7 @@ export default function DashboardClient({
                 onCalculatePay={handleCalculatePay} 
                 selectedYear={selectedYear} 
                 selectedMonth={selectedMonth}
-                errors={errors} // 🌟 에러 정보 전달
+                errors={errors}
               />
             </div>
           )}

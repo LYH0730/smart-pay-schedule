@@ -136,8 +136,12 @@ const AttendanceRow: React.FC<AttendanceRowProps> = ({
                     onChange={e => onUpdate(day, i, 'brk', e.target.value.replace(/\D/g, ''))} 
                     className={`w-12 text-center py-1.5 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-orange-500 transition-all ${
                       brkError 
-                      ? 'border-red-600 border-2 bg-red-50 text-red-700 ring-2 ring-red-100' 
-                      : r.isManual ? 'border-orange-300 bg-orange-50 font-bold text-orange-600' : 'border-slate-200'
+                      ? 'border-red-600 border-2 bg-red-50 text-red-700 ring-2 ring-red-100' // 1순위: 에러
+                      : !r.isManual && parseInt(r.brk || '0') > 0
+                      ? 'border-green-300 bg-green-50 text-green-700 font-bold' // 2순위: 자동계산 && 0분 초과
+                      : r.isManual 
+                      ? 'border-orange-300 bg-orange-50 font-bold text-orange-600' // 3순위: 수동입력
+                      : 'border-slate-200' // 그 외 기본
                     }`} 
                   />
                   {brkError && <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-red-700 text-white text-[10px] font-bold rounded shadow-xl whitespace-nowrap z-20 animate-in zoom-in-95">{brkError}</div>}

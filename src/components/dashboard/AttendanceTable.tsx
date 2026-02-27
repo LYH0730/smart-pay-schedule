@@ -14,7 +14,7 @@ interface AttendanceTableProps {
   onCalculatePay: () => void;
   selectedYear: number;
   selectedMonth: number;
-  errors: Record<string, string>; // 🌟 에러 타입 추가
+  errors: Record<string, string>;
 }
 
 const AttendanceTable: React.FC<AttendanceTableProps> = ({
@@ -27,7 +27,7 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
   onCalculatePay,
   selectedYear,
   selectedMonth,
-  errors // 🌟 에러 상태 받기
+  errors
 }) => {
   const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
   const hasErrors = Object.keys(errors).length > 0;
@@ -48,7 +48,7 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
               onUpdate={onUpdateRecord}
               onDelete={onDeleteRecord}
               onAdd={onAddRecord}
-              errors={errors} // 🌟 행으로 에러 정보 전달
+              errors={errors}
             />
           ))}
         </div>

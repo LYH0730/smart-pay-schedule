@@ -86,8 +86,8 @@ export default function DashboardPage() {
                 className="w-full p-3 bg-slate-50 border-none rounded-xl font-bold text-orange-600 focus:ring-2 focus:ring-orange-400 outline-none"
               >
                 <option value="gemini-3-flash-preview">Gemini 3 Flash</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                <option value="gemini-3-pro-preview">Gemini 3 Pro</option>
+                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
               </select>
             </div>
 
