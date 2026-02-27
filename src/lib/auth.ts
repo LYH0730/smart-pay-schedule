@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
-import * as bcrypt from "bcryptjs"; 
+import * as bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -30,7 +30,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('등록되지 않은 이메일입니다.');
           }
 
-          // 4. 비밀번호 검증
+          // 3. 비밀번호 검증
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
           console.log('[DEBUG] Password match result:', isPasswordValid);
 
@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('비밀번호가 일치하지 않습니다.');
           }
 
-          // 5. 성공 시 유저 객체 반환
+          // 4. 성공 시 유저 객체 반환
           return {
             id: user.id,
             email: user.email,
@@ -56,22 +56,8 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   
-  // 수정: 운영 환경(HTTPS)에서만 true, 로컬은 false
-  useSecureCookies: process.env.NODE_ENV === "production", 
-  
-  cookies: {
-    sessionToken: {
-      // 운영 환경에서는 __Secure- 를 붙이고, 로컬에서는 기본 이름을 사용
-      name: process.env.NODE_ENV === "production" ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === "production", // 운영 환경에서만 secure 적용
-      },
-    },
-  },
-  // 디버깅 비활성화
+  // 👇 쿠키 관련 수동 설정(useSecureCookies, cookies 객체) 완전 삭제 완료! NextAuth 기본값 사용.
+
   debug: false,
 
   pages: {
@@ -82,7 +68,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.name = user.name; 
+        token.name = user.name;
       }
       return token;
     },

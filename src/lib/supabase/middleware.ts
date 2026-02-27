@@ -38,9 +38,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // [Debug] 현재 경로와 사용자 유무 확인
-  // console.log(`[Middleware] Path: ${request.nextUrl.pathname}, User: ${user?.email || 'Guest'}`);
-
   // API 경로 보호: 로그인하지 않은 사용자가 /api/analyze 호출 시 차단
   if (request.nextUrl.pathname.startsWith('/api/analyze') && !user) {
     return NextResponse.json(
@@ -49,13 +46,15 @@ export async function updateSession(request: NextRequest) {
     )
   }
 
-  // 대시보드 페이지 보호: 비로그인 시 로그인 페이지로 리다이렉트
+  // 👇 주석 처리 완료: 대시보드 진입은 NextAuth가 관리하도록 Supabase 미들웨어에서는 검사 패스!
+  /*
   if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
     console.log('[Middleware] Unauthorized access to dashboard. Redirecting to /login');
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
+  */
 
   return response
 }
