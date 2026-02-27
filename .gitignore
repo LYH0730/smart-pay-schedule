@@ -48,3 +48,5 @@ pnpm-debug.log*
 
 /src/generated/prisma
 .aider*
+
+/scripts
