@@ -35,13 +35,18 @@ const AttendanceTable: React.FC<AttendanceTableProps> = ({
   return (
     <div className="space-y-6">
       <article className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 max-w-full">
-        {/* ... (중략: 헤더) */}
+        <header className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <EditableHeaderName
+            initialName={employeeName}
+            onNameUpdate={onUpdateName}
+          />
+        </header>
 
         {/* 1~31일 렌더링 루프 */}
         <div className="divide-y divide-slate-50 max-h-[70vh] overflow-y-auto overflow-x-hidden custom-scrollbar">
           {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
             <AttendanceRow
-              key={`${day}`} // 여기도 고정 키 권장
+              key={`${day}`}
               day={day}
               records={attendanceData[day] || []}
               isLastDayOfMonth={day === lastDayOfMonth}

@@ -2,21 +2,24 @@
 
 import { useState, useEffect } from 'react';
 
-export default function EditableHeaderName({ initialValue, onCommit }: { initialValue: string, onCommit: (newValue: string) => void }) {
-  const [value, setValue] = useState(initialValue);
+export default function EditableHeaderName({ initialName, onNameUpdate }: { initialName: string, onNameUpdate: (newName: string) => void }) {
+  const [value, setValue] = useState(initialName);
 
   useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
+    setValue(initialName);
+  }, [initialName]);
 
   const handleBlur = () => {
-    if (value.trim() !== initialValue) {
-      onCommit(value.trim());
+    if (value && value.trim() !== initialName) {
+      onNameUpdate(value.trim());
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    } else if (e.key === 'Escape') {
+      setValue(initialName);
       e.currentTarget.blur();
     }
   };
@@ -25,13 +28,14 @@ export default function EditableHeaderName({ initialValue, onCommit }: { initial
     <div className="flex items-center gap-2 group">
       <input
         type="text"
-        value={value}
+        value={value || ''}
         onChange={(e) => setValue(e.target.value)}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
-        className="bg-transparent text-white font-bold text-lg outline-none border-b border-transparent focus:border-orange-500 focus:bg-slate-800 transition-all w-auto min-w-[60px] max-w-[150px]"
+        className="bg-transparent text-lg font-black text-slate-700 outline-none border-b-2 border-transparent focus:border-orange-500 focus:bg-slate-50 transition-all w-auto min-w-[60px] max-w-[150px] p-1"
+        placeholder="직원 이름..."
       />
-      <span className="text-slate-500 text-sm group-hover:text-slate-300 transition-colors">✏️</span>
+      <span className="text-slate-400 text-sm opacity-50 group-hover:opacity-100 transition-opacity">✏️</span>
     </div>
   );
 }
