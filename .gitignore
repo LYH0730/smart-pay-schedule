@@ -52,3 +52,5 @@ pnpm-debug.log*
 .aider*
 
 /scripts
+SYSTEM_EXPANSION_PLAN.md
+SYSTEM_EXPANSION_FINAL_PLAN.md
