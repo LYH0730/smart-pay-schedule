@@ -135,8 +135,10 @@ export default function PaySummary({
       // --- 1페이지: 급여 명세서 ---
       const startDate = weeklySummaries[0]?.startDate || "";
       const endDate = weeklySummaries[weeklySummaries.length - 1]?.endDate || "";
-      const withholdingTax = Math.floor(totalMonthlyPay * 0.033);
-      const totalNetPay = totalMonthlyPay - withholdingTax;
+      const incomeTax = Math.floor((totalMonthlyPay * 0.03) / 10) * 10;
+      const localIncomeTax = Math.floor((incomeTax * 0.1) / 10) * 10;
+      const totalDeduction = incomeTax + localIncomeTax;
+      const totalNetPay = totalMonthlyPay - totalDeduction;
 
             doc.setFontSize(11);
             doc.setTextColor(0, 0, 0);
@@ -159,7 +161,8 @@ export default function PaySummary({
           ['총 유급시간', formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
           ['시급', hourlyWage.toLocaleString() + '원'],
           ['총 지급액 (세전)', totalMonthlyPay.toLocaleString() + '원'],
-          ['원천징수 3.3%', withholdingTax.toLocaleString() + '원'],
+          ['소득세 (3%)', incomeTax.toLocaleString() + '원'],
+          ['지방소득세 (0.3%)', localIncomeTax.toLocaleString() + '원'],
           ['실지급액', { content: totalNetPay.toLocaleString() + '원', styles: { fontStyle: 'bold' } }]
         ],
         theme: 'grid',
@@ -302,8 +305,10 @@ export default function PaySummary({
     try {
       const startDate = weeklySummaries[0]?.startDate || "";
       const endDate = weeklySummaries[weeklySummaries.length - 1]?.endDate || "";
-      const withholdingTax = Math.floor(totalMonthlyPay * 0.033);
-      const totalNetPay = totalMonthlyPay - withholdingTax;
+      const incomeTax = Math.floor((totalMonthlyPay * 0.03) / 10) * 10;
+      const localIncomeTax = Math.floor((incomeTax * 0.1) / 10) * 10;
+      const totalDeduction = incomeTax + localIncomeTax;
+      const totalNetPay = totalMonthlyPay - totalDeduction;
 
       // --- 1. 급여 명세서 테이블 행 구성 ---
       const payslipRows = [
@@ -315,7 +320,8 @@ export default function PaySummary({
         ['총 유급시간', formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
         ['시급', `${hourlyWage.toLocaleString()}원`],
         ['총 지급액 (세전)', `${totalMonthlyPay.toLocaleString()}원`],
-        ['원천징수 3.3%', `${withholdingTax.toLocaleString()}원`],
+        ['소득세 (3%)', `${incomeTax.toLocaleString()}원`],
+        ['지방소득세 (0.3%)', `${localIncomeTax.toLocaleString()}원`],
         ['실지급액', `${totalNetPay.toLocaleString()}원`],
       ].map(([label, value]) => 
         new TableRow({
@@ -484,6 +490,11 @@ export default function PaySummary({
     }
   };
 
+  const incomeTax = Math.floor((totalMonthlyPay * 0.03) / 10) * 10;
+  const localIncomeTax = Math.floor((incomeTax * 0.1) / 10) * 10;
+  const totalDeduction = incomeTax + localIncomeTax;
+  const totalNetPay = totalMonthlyPay - totalDeduction;
+
   return (
     <div className="mt-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 🧾 리포트 헤더 */}
@@ -617,7 +628,7 @@ export default function PaySummary({
               </div>
               <div className="flex justify-between items-center text-red-500 gap-4">
                 <span className="text-xs font-bold whitespace-nowrap">공제(3.3%)</span>
-                <span className="text-base font-bold whitespace-nowrap tabular-nums">- {Math.floor(totalMonthlyPay * 0.033).toLocaleString()}원</span>
+                <span className="text-base font-bold whitespace-nowrap tabular-nums">- {totalDeduction.toLocaleString()}원</span>
               </div>
               <div className="pt-3 mt-2 border-t-2 border-slate-100 flex justify-between items-end gap-2">
                 <div className="min-w-0">
@@ -626,7 +637,7 @@ export default function PaySummary({
                 </div>
                 <div className="text-right whitespace-nowrap shrink-0">
                   <span className="text-2xl font-black text-slate-900 tracking-tighter tabular-nums">
-                    {(totalMonthlyPay - Math.floor(totalMonthlyPay * 0.033)).toLocaleString()}
+                    {totalNetPay.toLocaleString()}
                   </span>
                   <span className="text-[10px] font-black text-slate-400 ml-0.5">원</span>
                 </div>

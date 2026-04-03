@@ -127,6 +127,21 @@ export default function CalculationBreakdown({ isOpen, onClose, weeklySummaries,
                       <p>TotalPay = BasePay + Juhyu_Pay</p>
                     </div>
                   </div>
+
+                   {/* Step 4 */}
+                   <div>
+                    <h4 className="font-bold text-slate-800 mb-2">Step 4. 세금 및 공제액 (Tax & Deduction)</h4>
+                    <div className="bg-slate-900 text-slate-200 p-4 rounded-lg font-mono text-xs md:text-sm overflow-x-auto">
+                      <p className="text-green-400">// 소득세 3% 및 지방소득세 0.3%(소득세의 10%) 계산</p>
+                      <p className="text-green-400">// 각각 10원 단위 절사(Truncation) 적용</p>
+                      <p>Monthly_Gross = ∑(Weekly TotalPay)</p>
+                      <p>Income_Tax = Math.floor((Monthly_Gross * 0.03) / 10) * 10</p>
+                      <p>Local_Tax = Math.floor((Income_Tax * 0.1) / 10) * 10</p>
+                      <p>Total_Deduction = Income_Tax + Local_Tax</p>
+                      <br/>
+                      <p>Net_Pay = Monthly_Gross - Total_Deduction</p>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
