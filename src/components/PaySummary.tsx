@@ -31,6 +31,7 @@ interface PaySummaryProps {
   year: number;       // 🌟 해당 년도
   month: number;      // 🌟 해당 월 (0-based)
   shopName: string;   // 🌟 가게 이름
+  isFixedWage: boolean; // 🌟 주휴수당 포함 시급 여부
 }
 
 export default function PaySummary({
@@ -40,7 +41,8 @@ export default function PaySummary({
   allShifts,
   year,
   month,
-  shopName
+  shopName,
+  isFixedWage
 }: PaySummaryProps) {
   const [totalMonthlyPay, setTotalMonthlyPay] = useState(0);
   const [totalMonthlyMinutes, setTotalMonthlyMinutes] = useState(0); 
@@ -157,9 +159,9 @@ export default function PaySummary({
           ['기간', `${startDate} ~ ${endDate}`],
           ['휴게시간', formatMinutesToHM(totalMonthlyUnpaidBreakMinutes)],
           ['실근무시간', formatMinutesToHM(totalMonthlyActualWorkingMinutes)],
-          ['주휴수당 시간', formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)],
-          ['총 유급시간', formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
-          ['시급', hourlyWage.toLocaleString() + '원'],
+          ['주휴수당 시간', isFixedWage ? '시급에 포함' : formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)],
+          ['총 유급시간', isFixedWage ? formatMinutesToHM(totalMonthlyActualWorkingMinutes) : formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
+          ['시급', hourlyWage.toLocaleString() + '원' + (isFixedWage ? ' (주휴포함)' : '')],
           ['총 지급액 (세전)', totalMonthlyPay.toLocaleString() + '원'],
           ['소득세 (3%)', incomeTax.toLocaleString() + '원'],
           ['지방소득세 (0.3%)', localIncomeTax.toLocaleString() + '원'],
@@ -316,9 +318,9 @@ export default function PaySummary({
         ['기간', `${startDate} ~ ${endDate}`],
         ['휴게시간', formatMinutesToHM(totalMonthlyUnpaidBreakMinutes)],
         ['실근무시간', formatMinutesToHM(totalMonthlyActualWorkingMinutes)],
-        ['주휴수당 시간', formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)],
-        ['총 유급시간', formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
-        ['시급', `${hourlyWage.toLocaleString()}원`],
+        ['주휴수당 시간', isFixedWage ? '시급에 포함' : formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)],
+        ['총 유급시간', isFixedWage ? formatMinutesToHM(totalMonthlyActualWorkingMinutes) : formatMinutesToHM(totalMonthlyPaidWorkingMinutes)],
+        ['시급', `${hourlyWage.toLocaleString()}원 ${isFixedWage ? '(주휴포함)' : ''}`],
         ['총 지급액 (세전)', `${totalMonthlyPay.toLocaleString()}원`],
         ['소득세 (3%)', `${incomeTax.toLocaleString()}원`],
         ['지방소득세 (0.3%)', `${localIncomeTax.toLocaleString()}원`],
@@ -577,8 +579,8 @@ export default function PaySummary({
                 </div>
                 <div className="flex justify-between items-center text-xs gap-2">
                   <span className="text-slate-500 font-medium whitespace-nowrap">주휴발생</span>
-                  <span className="font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-50 tabular-nums">
-                    {formatMinutesToHM(weekSummary.weeklyHolidayAllowanceMinutes)}
+                  <span className={`font-bold px-1.5 py-0.5 rounded border border-slate-50 tabular-nums ${isFixedWage ? 'text-orange-500 bg-orange-50/50' : 'text-slate-700 bg-white'}`}>
+                    {isFixedWage ? '시급 포함' : formatMinutesToHM(weekSummary.weeklyHolidayAllowanceMinutes)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs gap-2">
@@ -609,15 +611,21 @@ export default function PaySummary({
               </div>
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
                 <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">주휴 시간</span>
-                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)}</span>
+                <span className={`text-base font-black whitespace-nowrap tabular-nums ${isFixedWage ? 'text-orange-500' : 'text-slate-800'}`}>
+                  {isFixedWage ? '시급에 포함' : formatMinutesToHM(totalMonthlyWeeklyHolidayAllowanceMinutes)}
+                </span>
               </div>
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
                 <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">유급 총합</span>
-                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">{formatMinutesToHM(totalMonthlyPaidWorkingMinutes)}</span>
+                <span className="text-base font-black text-slate-800 whitespace-nowrap tabular-nums">
+                  {isFixedWage ? formatMinutesToHM(totalMonthlyActualWorkingMinutes) : formatMinutesToHM(totalMonthlyPaidWorkingMinutes)}
+                </span>
               </div>
               <div className="flex justify-between items-center pb-1.5 border-b border-slate-200 border-dashed gap-4">
                 <span className="text-xs font-bold text-slate-500 italic whitespace-nowrap">주휴수당</span>
-                <span className="text-base font-black text-orange-600 whitespace-nowrap tabular-nums">₩{totalMonthlyWHA.toLocaleString()}</span>
+                <span className={`text-base font-black whitespace-nowrap tabular-nums ${isFixedWage ? 'text-orange-500' : 'text-orange-600'}`}>
+                  {isFixedWage ? '₩0 (포함됨)' : `₩${totalMonthlyWHA.toLocaleString()}`}
+                </span>
               </div>
             </div>
 

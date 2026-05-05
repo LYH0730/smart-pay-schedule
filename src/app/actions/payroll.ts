@@ -19,7 +19,13 @@ function calculateShiftDurationMinutes(shift: Shift): number {
 }
 
 // 🌟 [서버 액션] 월별 급여 정산 함수 (브라우저에서 호출 가능하지만 실행은 서버에서 됨)
-export async function calculatePayrollServer(allShifts: Shift[], hourlyWage: number, year: number, month: number) {
+export async function calculatePayrollServer(
+  allShifts: Shift[], 
+  hourlyWage: number, 
+  year: number, 
+  month: number,
+  isFixedWage: boolean = false
+) {
   // [보안] 시급 변조 방어 로직 (프론트에서 100만원으로 조작해서 보내도 여기서 차단)
   const MINIMUM_WAGE = 10030; // 2025년 최저시급 (필요 시 수정)
   if (hourlyWage < MINIMUM_WAGE) {
@@ -32,7 +38,7 @@ export async function calculatePayrollServer(allShifts: Shift[], hourlyWage: num
   try {
     const lastDay = new Date(year, month + 1, 0).getDate();
     const summaries: WeeklyPayrollSummary[] = [];
-    
+
     let weekNum = 1;
     let weekStart = 1;
     let currentWeekActualWorkingMinutes = 0;
@@ -41,7 +47,7 @@ export async function calculatePayrollServer(allShifts: Shift[], hourlyWage: num
     for (let day = 1; day <= lastDay; day++) {
       const currentDay = new Date(year, month, day);
       const dayShifts = allShifts.filter(s => parseInt(s.day) === day);
-      
+
       dayShifts.forEach(s => {
         const shiftDuration = calculateShiftDurationMinutes(s);
         currentWeekActualWorkingMinutes += shiftDuration;
@@ -53,7 +59,8 @@ export async function calculatePayrollServer(allShifts: Shift[], hourlyWage: num
 
       if (currentDay.getDay() === 6 || day === lastDay) {
         let weeklyHolidayAllowanceMinutes = 0;
-        if (currentWeekActualWorkingMinutes >= 900) {
+        // 🌟 [수정] 주휴수당 포함 시급이 아닐 때만 주휴수당 계산
+        if (!isFixedWage && currentWeekActualWorkingMinutes >= 900) {
           weeklyHolidayAllowanceMinutes = Math.floor((currentWeekActualWorkingMinutes / (40 * 60)) * (8 * 60));
           weeklyHolidayAllowanceMinutes = Math.min(weeklyHolidayAllowanceMinutes, 480);
         }

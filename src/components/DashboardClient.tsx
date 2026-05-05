@@ -86,6 +86,7 @@ export default function DashboardClient({
   const [hourlyWage, setHourlyWage] = useState(10320);
   const [breakThreshold, setBreakThreshold] = useState(480);
   const [breakDeduction, setBreakDeduction] = useState(60);
+  const [isFixedWage, setIsFixedWage] = useState(false); // 🌟 주휴수당 포함 시급 여부
   const [calculatedPaySummary, setCalculatedPaySummary] = useState<WeeklyPayrollSummary[]>([]);
   
   const [shopName, setShopName] = useState("나의 가게");
@@ -193,6 +194,7 @@ export default function DashboardClient({
   const handleAnalyzeAll = async () => {
     if (selectedFiles.length === 0) return setError("분석할 이미지를 선택하세요.");
     setAttendanceData(createInitialAttendance());
+    setCalculatedPaySummary([]); // 🌟 [추가] AI 분석 시작 시 기존 정산 리포트 "폭파"
     setHasStarted(true);
     setIsLoading(true);
     setCountdown(40);
@@ -298,7 +300,7 @@ export default function DashboardClient({
     
     setIsLoading(true);
     try {
-      const result = await calculatePayrollServer(validShifts, hourlyWage, selectedYear, selectedMonth);
+      const result = await calculatePayrollServer(validShifts, hourlyWage, selectedYear, selectedMonth, isFixedWage);
       if (result.success && result.data) {
         setCalculatedPaySummary(result.data.summaries);
       } else {
@@ -353,7 +355,16 @@ export default function DashboardClient({
 
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-8">
         <aside className="lg:col-span-3 space-y-6">
-          <GlobalSettings hourlyWage={hourlyWage} setHourlyWage={setHourlyWage} breakThreshold={breakThreshold} setBreakThreshold={setBreakThreshold} breakDeduction={breakDeduction} setBreakDeduction={setBreakDeduction} />
+          <GlobalSettings 
+            hourlyWage={hourlyWage} 
+            setHourlyWage={setHourlyWage} 
+            breakThreshold={breakThreshold} 
+            setBreakThreshold={setBreakThreshold} 
+            breakDeduction={breakDeduction} 
+            setBreakDeduction={setBreakDeduction}
+            isFixedWage={isFixedWage}
+            setIsFixedWage={setIsFixedWage}
+          />
           <ImageUploader useCompression={useCompression} setUseCompression={setUseCompression} isCompressing={isCompressing} isLoading={isLoading} handleFileChange={handleFileChange} filePreviews={filePreviews} setModalImageSrc={setModalImageSrc} setIsModalOpen={setIsModalOpen} selectedFilesCount={selectedFiles.length} onAnalyze={handleAnalyzeAll} error={error} />
         </aside>
         
@@ -404,7 +415,16 @@ export default function DashboardClient({
 
       {calculatedPaySummary.length > 0 && (
         <section className="mt-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <PaySummary weeklySummaries={calculatedPaySummary} hourlyWage={hourlyWage} employeeName={employeeName} allShifts={flattenedShiftsForSummary as any} year={selectedYear} month={selectedMonth} shopName={shopName} />
+          <PaySummary 
+            weeklySummaries={calculatedPaySummary} 
+            hourlyWage={hourlyWage} 
+            employeeName={employeeName} 
+            allShifts={flattenedShiftsForSummary as any} 
+            year={selectedYear} 
+            month={selectedMonth} 
+            shopName={shopName}
+            isFixedWage={isFixedWage} 
+          />
         </section>
       )}
 
